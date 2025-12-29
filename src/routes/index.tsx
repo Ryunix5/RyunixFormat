@@ -403,6 +403,14 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
     return cardModifications[item.name]?.imageUrl ?? archetypeImages[item.name] ?? item.imageUrl;
   }, [archetypeImages]);
 
+  // Fallback to placeholder when image fails
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    // Create a simple SVG placeholder
+    img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23334155' width='100' height='100'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='24' fill='%2394a3b8' text-anchor='middle' dy='.3em'%3E%3F%3C/text%3E%3C/svg%3E`;
+    img.onerror = null; // Prevent infinite loop
+  };
+
   // Use effective staples list (includes admin additions/removals)
   const items = category === "decks" ? ARCHETYPE_DECKS : getEffectiveStaples();
   
@@ -852,11 +860,13 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
             const imageUrl = getModifiedImage(item);
             return (
               <div key={item.name} ref={(el) => observeItem(el, item.name)} className="flex items-center gap-4 p-3 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors">
-                {imageUrl && (
-                  <div className="shrink-0 size-10 rounded overflow-hidden border border-slate-600/50 bg-slate-700/50">
-                    <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                  </div>
-                )}
+                <div className="shrink-0 size-10 rounded overflow-hidden border border-slate-600/50 bg-slate-700/50">
+                  {imageUrl ? (
+                    <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-500 text-xl font-bold">?</div>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   {category === "decks" ? (
                     <span className="font-semibold text-slate-100 truncate cursor-pointer hover:text-amber-300 transition-colors flex items-center gap-1" onClick={() => handleArchetypeClick(item.name)} title="Click to view cards">
@@ -892,11 +902,13 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
             return (
               <div key={item.name} ref={(el) => observeItem(el, item.name)} className="p-3 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  {imageUrl && (
-                    <div className="shrink-0 size-8 rounded overflow-hidden border border-slate-600/50 bg-slate-700/50">
-                      <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                    </div>
-                  )}
+                  <div className="shrink-0 size-8 rounded overflow-hidden border border-slate-600/50 bg-slate-700/50">
+                    {imageUrl ? (
+                      <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm font-bold">?</div>
+                    )}
+                  </div>
                   <Badge className={`font-bold text-xs ${getRatingStyle(rating)}`}>{rating}</Badge>
                 </div>
                 {category === "decks" ? (
@@ -934,11 +946,13 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none" />
                 <CardHeader className="pb-3 relative">
                   <div className="flex items-start gap-3">
-                    {imageUrl && (
-                      <div className="shrink-0 size-16 rounded-lg overflow-hidden border border-slate-600/50 bg-slate-700/50 shadow-md">
-                        <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                      </div>
-                    )}
+                    <div className="shrink-0 size-16 rounded-lg overflow-hidden border border-slate-600/50 bg-slate-700/50 shadow-md">
+                      {imageUrl ? (
+                        <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-500 text-2xl font-bold">?</div>
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         {category === "decks" ? (
