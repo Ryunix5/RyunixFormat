@@ -34,7 +34,7 @@ export function getPriceFromRating(rating: MetaRating): number {
 // Archetype Decks with Meta Ratings
 // Card IDs are from YGOPRODECK database - representative monsters for each archetype
 export const ARCHETYPE_DECKS: CatalogItem[] = [
-  { name: "Albaz", rating: "S", price: 200, imageUrl: getCardImageUrl(59977691) }, // Fallen of Albaz
+  { name: "Albaz", rating: "S", price: 200, imageUrl: getCardImageUrl(68468459) }, // Fallen of Albaz
   { name: "Abyss Actor", rating: "C", price: 25, imageUrl: getCardImageUrl(19474136) }, // Abyss Actor - Superstar
   { name: "Adamancipator", rating: "B", price: 50, imageUrl: getCardImageUrl(25174609) }, // Adamancipator Risen - Dragite
   { name: "Adventurer Token", rating: "A", price: 100, imageUrl: getCardImageUrl(57304293) }, // Wandering Gryphon Rider
@@ -43,7 +43,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Alien", rating: "D", price: 10, imageUrl: getCardImageUrl(23064373) }, // Alien Soldier M/Frame
   { name: "Ally of Justice", rating: "F", price: 0, imageUrl: getCardImageUrl(6051314) }, // Ally of Justice Decisive Armor
   { name: "Altergeist", rating: "A", price: 100, imageUrl: getCardImageUrl(1984618) }, // Altergeist Multifaker
-  { name: "Amazemment", rating: "C", price: 25, imageUrl: getCardImageUrl(90582792) }, // Amazement Administrator Arlekino
+  { name: "Amazemment", rating: "C", price: 25, imageUrl: getCardImageUrl(94821366) }, // Amazement Administrator Arlekino
   { name: "Amazoness", rating: "D", price: 10, imageUrl: getCardImageUrl(67987611) }, // Amazoness Queen
   { name: "Amorphage", rating: "D", price: 10, imageUrl: getCardImageUrl(7545997) }, // Amorphage Sloth
   { name: "Ancient Gear", rating: "C", price: 25, imageUrl: getCardImageUrl(10509340) }, // Ancient Gear Golem
@@ -52,7 +52,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Aquaactress", rating: "F", price: 0, imageUrl: getCardImageUrl(62329294) }, // Aquaactress Guppy
   { name: "Arcana Force", rating: "F", price: 0, imageUrl: getCardImageUrl(6150044) }, // Arcana Force XXI - The World
   { name: "Archfiend", rating: "D", price: 10, imageUrl: getCardImageUrl(58551308) }, // Summoned Skull
-  { name: "Armed Dragon", rating: "C", price: 25, imageUrl: getCardImageUrl(87706553) }, // Armed Dragon LV10
+  { name: "Armed Dragon", rating: "C", price: 25, imageUrl: getCardImageUrl(59464593) }, // Armed Dragon LV10
   { name: "Aroma", rating: "C", price: 25, imageUrl: getCardImageUrl(92266279) }, // Aromage Jasmine
   { name: "Artifact", rating: "B", price: 50, imageUrl: getCardImageUrl(53639887) }, // Artifact Scythe
   { name: "Artmage", rating: "C", price: 25, imageUrl: getCardImageUrl(27184601) }, // Artmage Diactorus
