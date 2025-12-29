@@ -1,0 +1,68 @@
+// Mapping from current catalog names to correct YGOPRODECK API archetype names
+export const ARCHETYPE_NAME_MAPPING: Record<string, string> = {
+  // Main mismatches
+  "Albaz": "Branded",
+  "Amazemment": "Amazement",
+  "Battlin Boxer": "Battlin' Boxer",
+  "Brotherhood of the Fire Fist": "Fire Fist",
+  "Edlich": "Eldlich",
+  "Evil Twin / Live Twin": "Live☆Twin",
+  "Evilswarm": "lswarm",
+  "Evoltile": "Evoltile",
+  "Exosister": "Exosister",
+  "Eyes Restrict": "Eyes Restrict",
+  "Fiendsmith": "Fiendsmith",
+  "Floowandereeze": "Floowandereeze",
+  "Gem-": "Gem-Knight",
+  "Ghoti": "Ghoti",
+  "Gold Pride": "Gold Pride",
+  "Gunkan": "Gunkan Suship",
+  "K9": "K.C.C.",
+  "Kewl Tune": "Kewl Tune",
+  "Lswarm": "lswarm",
+  "Maliss": "Maliss",
+  "Mitsurugi": "Mitsurugi",
+  "P.U.N.K.": "P.U.N.K.",
+  "Purrely": "Purrely",
+  "Ryzeal": "Ryzeal",
+  "Sangen": "Sangen",
+  "Snake-Eye": "Snake-Eye",
+  "Spright": "Spright",
+  "Starry Knight": "Starry Knight",
+  "Tenpai": "Tenpai Dragon",
+  "Yummy": "Yummy",
+  
+  // Duplicates to remove (keep the simpler name)
+  "Blue-Eyes White Dragon": "Blue-Eyes",
+  "Red-Eyes Black Dragon": "Red-Eyes",
+  "Gaia The Fierce Knight": "Gaia The Fierce Knight",
+  "Celtic Guard": "Celtic Guardian",
+  
+  // Other corrections
+  "Agent": "The Agent",
+  "Phantom Knights": "The Phantom Knights",
+  "Weather": "The Weather",
+  "Legendary Fisherman": "The Legendary Fisherman",
+  "Railway / Trains": "Trains",
+  "ZW -": "ZW",
+  "Gun Dragons - Barrel Dragon": "Barrel Dragon",
+  "Gradius - Spaceships": "Gradius",
+  "X-Y-Z Union": "XYZ",
+  "Dinossaur": "Dinosaur",
+};
+
+// Archetypes to remove (duplicates or non-existent)
+export const ARCHETYPES_TO_REMOVE = [
+  "Blue-Eyes White Dragon",
+  "Red-Eyes Black Dragon",
+  "Black Rose Dragon",
+  "Black Luster",
+  "Buster Blader",
+  "Flame Swordsman",
+  "Summoned Skull",
+  "Pot of Greed",
+  "Gun Dragons - Barrel Dragon",
+  "Gradius - Spaceships",
+  "X-Y-Z Union",
+  "Dinossaur",
+];

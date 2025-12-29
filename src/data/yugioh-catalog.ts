@@ -34,16 +34,16 @@ export function getPriceFromRating(rating: MetaRating): number {
 // Archetype Decks with Meta Ratings
 // Card IDs are from YGOPRODECK database - representative monsters for each archetype
 export const ARCHETYPE_DECKS: CatalogItem[] = [
-  { name: "Albaz", rating: "S", price: 200, imageUrl: getCardImageUrl(68468459) }, // Fallen of Albaz
+  { name: "Branded", rating: "S", price: 200, imageUrl: getCardImageUrl(68468459) }, // Fallen of Albaz
   { name: "Abyss Actor", rating: "C", price: 25, imageUrl: getCardImageUrl(19474136) }, // Abyss Actor - Superstar
   { name: "Adamancipator", rating: "B", price: 50, imageUrl: getCardImageUrl(11302671) }, // Adamancipator Risen - Dragite
   { name: "Adventurer Token", rating: "A", price: 100, imageUrl: getCardImageUrl(57304293) }, // Wandering Gryphon Rider
   { name: "Aesir", rating: "D", price: 10, imageUrl: getCardImageUrl(63767246) }, // Odin, Father of the Aesir
-  { name: "Agent", rating: "B", price: 50, imageUrl: getCardImageUrl(91188343) }, // The Agent of Creation - Venus
+  { name: "The Agent", rating: "B", price: 50, imageUrl: getCardImageUrl(91188343) }, // The Agent of Creation - Venus
   { name: "Alien", rating: "D", price: 10, imageUrl: getCardImageUrl(652362) }, // Alien Soldier M/Frame
   { name: "Ally of Justice", rating: "F", price: 0, imageUrl: getCardImageUrl(26593852) }, // Ally of Justice Decisive Armor
   { name: "Altergeist", rating: "A", price: 100, imageUrl: getCardImageUrl(1984618) }, // Altergeist Multifaker
-  { name: "Amazemment", rating: "C", price: 25, imageUrl: getCardImageUrl(94821366) }, // Amazement Administrator Arlekino
+  { name: "Amazement", rating: "C", price: 25, imageUrl: getCardImageUrl(94821366) }, // Amazement Administrator Arlekino
   { name: "Amazoness", rating: "D", price: 10, imageUrl: getCardImageUrl(67987611) }, // Amazoness Queen
   { name: "Amorphage", rating: "D", price: 10, imageUrl: getCardImageUrl(33300669) }, // Amorphage Sloth
   { name: "Ancient Gear", rating: "C", price: 25, imageUrl: getCardImageUrl(10509340) }, // Ancient Gear Golem
@@ -61,16 +61,13 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Atlantean", rating: "A", price: 100, imageUrl: getCardImageUrl(29802344) }, // Atlantean Dragoons
   { name: "Batteryman", rating: "D", price: 10, imageUrl: getCardImageUrl(52584282) }, // Batteryman AA
   { name: "Battlewasp", rating: "D", price: 10, imageUrl: getCardImageUrl(94380860) }, // Battlewasp - Hama the Conquering Bow
-  { name: "Battlin Boxer", rating: "C", price: 25, imageUrl: getCardImageUrl(86325573) }, // Number 105: Battlin' Boxer Star Cestus
+  { name: "Battlin' Boxer", rating: "C", price: 25, imageUrl: getCardImageUrl(86325573) }, // Number 105: Battlin' Boxer Star Cestus
   { name: "Beetrooper", rating: "B", price: 50, imageUrl: getCardImageUrl(2834264) }, // Giant Beetrooper Invincible Atlas
-  { name: "Black Luster", rating: "C", price: 25, imageUrl: getCardImageUrl(5405694) }, // Black Luster Soldier
-  { name: "Black Rose Dragon", rating: "B", price: 50, imageUrl: getCardImageUrl(73580471) }, // Black Rose Dragon
   { name: "Blackwing", rating: "A", price: 100, imageUrl: getCardImageUrl(14785765) }, // Blackwing - Simoon the Poison Wind
   { name: "Blue-Eyes", rating: "C", price: 25, imageUrl: getCardImageUrl(89631139) }, // Blue-Eyes White Dragon
   { name: "Bounzer", rating: "D", price: 10, imageUrl: getCardImageUrl(70194827) }, // Number 61: Volcasaurus
   { name: "Bujin", rating: "D", price: 10, imageUrl: getCardImageUrl(37742478) }, // Bujinki Ahashima
   { name: "Burning Abyss", rating: "B", price: 50, imageUrl: getCardImageUrl(15341821) }, // Dante, Traveler of the Burning Abyss
-  { name: "Buster Blader", rating: "C", price: 25, imageUrl: getCardImageUrl(78193831) }, // Buster Blader
   { name: "Butterspy", rating: "F", price: 0, imageUrl: getCardImageUrl(54582424) }, // Morpho Butterspy
   { name: "Bystial", rating: "S", price: 200, imageUrl: getCardImageUrl(92107604) }, // Bystial Druiswurm
   { name: "Centur-Ion", rating: "S", price: 200, imageUrl: getCardImageUrl(62325062) }, // Centur-Ion Primera
@@ -120,7 +117,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Duston", rating: "F", price: 0, imageUrl: getCardImageUrl(40217358) }, // House Duston
   { name: "Earthbound", rating: "D", price: 10, imageUrl: getCardImageUrl(91712985) }, // Earthbound Immortal Ccapac Apu
   { name: "Edge Imp", rating: "C", price: 25, imageUrl: getCardImageUrl(61173621) }, // Edge Imp Sabres
-  { name: "Edlich", rating: "A", price: 100, imageUrl: getCardImageUrl(2530830) }, // Eldlich the Golden Lord
+  { name: "Eldlich", rating: "A", price: 100, imageUrl: getCardImageUrl(2530830) }, // Eldlich the Golden Lord
   { name: "Elemental Hero", rating: "B", price: 50, imageUrl: getCardImageUrl(35809262) }, // Elemental HERO Neos
   { name: "Elementsaber", rating: "D", price: 10, imageUrl: getCardImageUrl(83032858) }, // Elementsaber Molehu
   { name: "Empowered Warrior", rating: "F", price: 0, imageUrl: getCardImageUrl(29687169) }, // Empowered Warrior - Arnis
@@ -128,8 +125,8 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Enneacraft", rating: "A", price: 100, imageUrl: getCardImageUrl(54842941) }, // Enneacraft - Atori.MAR
   { name: "Evil Eye", rating: "B", price: 50, imageUrl: getCardImageUrl(81344637) }, // Serziel, Watcher of the Evil Eye
   { name: "Evil Hero", rating: "B", price: 50, imageUrl: getCardImageUrl(13650422) }, // Evil HERO Malicious Bane
-  { name: "Evil Twin / Live Twin", rating: "A", price: 100, imageUrl: getCardImageUrl(79965360) }, // Evil★Twin Ki-sikil
-  { name: "Evilswarm", rating: "D", price: 10, imageUrl: getCardImageUrl(42679662) }, // Evilswarm Ophion
+  { name: "Live☆Twin", rating: "A", price: 100, imageUrl: getCardImageUrl(79965360) }, // Evil★Twin Ki-sikil
+  { name: "lswarm", rating: "D", price: 10, imageUrl: getCardImageUrl(42679662) }, // Evilswarm Ophion
   { name: "Evoltile", rating: "F", price: 0, imageUrl: getCardImageUrl(14391920) }, // Evolzar Dolkka
   { name: "Exosister", rating: "A", price: 100, imageUrl: getCardImageUrl(4408198) }, // Exosister Elis
   { name: "Eyes Restrict", rating: "C", price: 25, imageUrl: getCardImageUrl(41578483) }, // Millennium-Eyes Restrict
@@ -139,7 +136,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Fairy Tail", rating: "C", price: 25, imageUrl: getCardImageUrl(86937530) }, // Fairy Tail - Snow
   { name: "Familiar-Possessed", rating: "C", price: 25, imageUrl: getCardImageUrl(31887905) }, // Familiar-Possessed - Hiita
   { name: "Fiendsmith", rating: "S", price: 200, imageUrl: getCardImageUrl(2463794) }, // Fiendsmith's Requiem
-  { name: "Brotherhood of the Fire Fist", rating: "B", price: 50, imageUrl: getCardImageUrl(6353603) }, // Brotherhood of the Fire Fist - Tiger King
+  { name: "Fire Fist", rating: "B", price: 50, imageUrl: getCardImageUrl(6353603) }, // Brotherhood of the Fire Fist - Tiger King
   { name: "Fire King", rating: "S", price: 200, imageUrl: getCardImageUrl(59388357) }, // Fire King High Avatar Garunix
   { name: "Fire Warrior", rating: "D", price: 10, imageUrl: getCardImageUrl(50179591) }, // Flame Swordsman
   { name: "Flame Swordsman", rating: "D", price: 10, imageUrl: getCardImageUrl(50903514) }, // Flame Swordsman
@@ -164,7 +161,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Gate Guardian", rating: "C", price: 25, imageUrl: getCardImageUrl(25833572) }, // Gate Guardian
   { name: "Gearfried", rating: "D", price: 10, imageUrl: getCardImageUrl(423705) }, // Gearfried the Iron Knight
   { name: "Geargia", rating: "C", price: 25, imageUrl: getCardImageUrl(29087919) }, // Gear Gigant X
-  { name: "Gem-", rating: "B", price: 50, imageUrl: getCardImageUrl(27004302) }, // Gem-Knight Master Diamond
+  { name: "Gem-Knight", rating: "B", price: 50, imageUrl: getCardImageUrl(27004302) }, // Gem-Knight Master Diamond
   { name: "Generaider", rating: "A", price: 100, imageUrl: getCardImageUrl(76382116) }, // Harr, Generaider Boss of Storms
   { name: "Genex", rating: "F", price: 0, imageUrl: getCardImageUrl(61775475) }, // Genex Ally Birdman
   { name: "Ghostrick", rating: "C", price: 25, imageUrl: getCardImageUrl(4939890) }, // Ghostrick Alucard
@@ -182,7 +179,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Goyo", rating: "D", price: 10, imageUrl: getCardImageUrl(84224627) }, // Goyo Guardian
   { name: "Gravekeeper", rating: "C", price: 25, imageUrl: getCardImageUrl(45894482) }, // Gravekeeper's Commandant
   { name: "Graydle", rating: "D", price: 10, imageUrl: getCardImageUrl(66451379) }, // Graydle Dragon
-  { name: "Gunkan", rating: "B", price: 50, imageUrl: getCardImageUrl(83008724) }, // Placeholder
+  { name: "Gunkan Suship", rating: "B", price: 50, imageUrl: getCardImageUrl(83008724) }, // Placeholder
   { name: "Gusto", rating: "D", price: 10, imageUrl: getCardImageUrl(82422049) }, // Daigusto Sphreez
   { name: "Harpie", rating: "B", price: 50, imageUrl: getCardImageUrl(80316585) }, // Harpie's Feather Duster
   { name: "Hazy Flame", rating: "F", price: 0, imageUrl: getCardImageUrl(23776077) }, // Hazy Flame Basiltrice
@@ -205,7 +202,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Iron Chain", rating: "F", price: 0, imageUrl: getCardImageUrl(26157485) }, // Iron Chain Dragon
   { name: "Junk", rating: "B", price: 50, imageUrl: getCardImageUrl(63977008) }, // Junk Warrior
   { name: "Jurrac", rating: "F", price: 0, imageUrl: getCardImageUrl(21263083) }, // Jurrac Meteor
-  { name: "K9", rating: "S", price: 200, imageUrl: getCardImageUrl(92248362) }, // K9-17 Izuna
+  { name: "K.C.C.", rating: "S", price: 200, imageUrl: getCardImageUrl(92248362) }, // K9-17 Izuna
   { name: "Kaiju", rating: "A", price: 100, imageUrl: getCardImageUrl(10389142) }, // Gameciel, the Sea Turtle Kaiju
   { name: "Karakuri", rating: "C", price: 25, imageUrl: getCardImageUrl(85541675) }, // Karakuri Steel Shogun mdl 00X "Bureido"
   { name: "Kashtira", rating: "S", price: 200, imageUrl: getCardImageUrl(9272381) }, // Kashtira Fenrir
@@ -220,7 +217,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Libromancer", rating: "B", price: 50, imageUrl: getCardImageUrl(19516687) }, // Libromancer First Appearance
   { name: "Lightray", rating: "F", price: 0, imageUrl: getCardImageUrl(38737148) }, // Lightray Sorcerer
   { name: "Lightsworn", rating: "B", price: 50, imageUrl: getCardImageUrl(22624373) }, // Judgment Dragon
-  { name: "Lswarm", rating: "D", price: 10, imageUrl: getCardImageUrl(42679662) }, // Evilswarm Ophion
+  { name: "lswarm", rating: "D", price: 10, imageUrl: getCardImageUrl(42679662) }, // Evilswarm Ophion
   { name: "Lunalight", rating: "B", price: 50, imageUrl: getCardImageUrl(11317977) }, // Lunalight Sabre Dancer
   { name: "Lyrilusc", rating: "A", price: 100, imageUrl: getCardImageUrl(8491961) }, // Lyrilusc - Assembled Nightingale
   { name: "Machina", rating: "B", price: 50, imageUrl: getCardImageUrl(23469398) }, // Machina Fortress
@@ -407,19 +404,14 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Zombie", rating: "A", price: 100, imageUrl: getCardImageUrl(51570882) }, // Doomking Balerdroch
   { name: "Zoodiac", rating: "B", price: 50, imageUrl: getCardImageUrl(48905153) }, // Zoodiac Drident
   { name: "Zubaba", rating: "D", price: 10, imageUrl: getCardImageUrl(57036718) }, // Zubaba Knight
-  { name: "ZW -", rating: "D", price: 10, imageUrl: getCardImageUrl(6330307) }, // ZW - Unicorn Spear
-  { name: "Blue-Eyes White Dragon", rating: "C", price: 25, imageUrl: getCardImageUrl(89631139) }, // Blue-Eyes White Dragon
+  { name: "ZW", rating: "D", price: 10, imageUrl: getCardImageUrl(6330307) }, // ZW - Unicorn Spear
   { name: "Gaia The Fierce Knight", rating: "C", price: 25, imageUrl: getCardImageUrl(6368038) }, // Gaia The Fierce Knight
-  { name: "Celtic Guard", rating: "D", price: 10, imageUrl: getCardImageUrl(39507162) }, // Celtic Guardian
+  { name: "Celtic Guardian", rating: "D", price: 10, imageUrl: getCardImageUrl(39507162) }, // Celtic Guardian
   { name: "Umi", rating: "C", price: 25, imageUrl: getCardImageUrl(22702055) }, // Umi
   { name: "Trap Hole", rating: "B", price: 50, imageUrl: getCardImageUrl(4206964) }, // Trap Hole
   { name: "Fusion", rating: "C", price: 25, imageUrl: getCardImageUrl(24094653) }, // Polymerization
-  { name: "Red-Eyes Black Dragon", rating: "C", price: 25, imageUrl: getCardImageUrl(74677422) }, // Red-Eyes Black Dragon
-  { name: "Pot of Greed", rating: "F", price: 0, imageUrl: getCardImageUrl(55144522) }, // Pot of Greed
   { name: "Battleguard", rating: "D", price: 10, imageUrl: getCardImageUrl(5577149) }, // Swamp Battleguard
-  { name: "Summoned Skull", rating: "C", price: 25, imageUrl: getCardImageUrl(70781052) }, // Summoned Skull
   { name: "Jinzo", rating: "C", price: 25, imageUrl: getCardImageUrl(77585513) }, // Jinzo
-  { name: "Gun Dragons - Barrel Dragon", rating: "C", price: 25, imageUrl: getCardImageUrl(81480460) }, // Barrel Dragon
   { name: "Solemn Cards", rating: "S", price: 200, imageUrl: getCardImageUrl(41420027) }, // Solemn Judgment
   { name: "Mirror Force", rating: "B", price: 50, imageUrl: getCardImageUrl(44095762) }, // Mirror Force
   { name: "Ritual", rating: "C", price: 25, imageUrl: getCardImageUrl(64631466) }, // Placeholder
@@ -462,7 +454,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Egyptian Gods", rating: "C", price: 25, imageUrl: getCardImageUrl(89631139) }, // Obelisk the Tormentor
   { name: "Crashbug", rating: "F", price: 0, imageUrl: getCardImageUrl(86804246) }, // Super Crashbug
   { name: "Hunder", rating: "D", price: 10, imageUrl: getCardImageUrl(41420027) }, // Vylon Disigma
-  { name: "Railway / Trains", rating: "A", price: 100, imageUrl: getCardImageUrl(35094006) }, // Superdreadnought Rail Cannon Gustav Max
+  { name: "Trains", rating: "A", price: 100, imageUrl: getCardImageUrl(35094006) }, // Superdreadnought Rail Cannon Gustav Max
   // { name: "Sparrow Family", rating: "F", price: 0, imageUrl: getCardImageUrl(46986414) }, // OCG Only - No TCG Release
   { name: "Malicevorous", rating: "D", price: 10, imageUrl: getCardImageUrl(61791132) }, // Malicevorous Fork
   { name: "Legendary Knight", rating: "C", price: 25, imageUrl: getCardImageUrl(85800949) }, // Legendary Knight Timaeus
@@ -492,7 +484,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "King's Sarcophagus", rating: "A", price: 100, imageUrl: getCardImageUrl(16528181) }, // King's Sarcophagus
   { name: "Earthbound Servant", rating: "C", price: 25, imageUrl: getCardImageUrl(71101678) }, // Earthbound Servant Geo Grasha
   { name: "Veda", rating: "C", price: 25, imageUrl: getCardImageUrl(40785230) }, // Veda Kalarcanum
-  { name: "Tenpai", rating: "S", price: 200, imageUrl: getCardImageUrl(39931513) }, // Tenpai Dragon Paidra
+  { name: "Tenpai Dragon", rating: "S", price: 200, imageUrl: getCardImageUrl(39931513) }, // Tenpai Dragon Paidra
   { name: "Max Metalmorph", rating: "C", price: 25, imageUrl: getCardImageUrl(29157292) }, // Metal Illusionist
   { name: "Primite", rating: "B", price: 50, imageUrl: getCardImageUrl(81418467) }, // Primite Imperial Dragon
   { name: "Azamina", rating: "B", price: 50, imageUrl: getCardImageUrl(73391962) }, // Azamina Mu Rcielago
