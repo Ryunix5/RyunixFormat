@@ -40,6 +40,16 @@ export const ARCHETYPE_NAME_MAPPING: Record<string, string> = {
   "Phantom Knights": "Phantom Knights",
   "Visas Starfrost": "Visas",
   
+  // Final round of corrections
+  "Familiar-Possessed": "Charmer",
+  "Fossil Fusion": "Fossil",
+  "Gem-Knight": "Gem-",
+  "Gunkan Suship": "Gunkan",
+  "Heraldic Beast": "Heraldic",
+  "The Phantom Knights": "Phantom Knights",
+  "Trains": "Train",
+  "Celtic Guardian": "Celtic Guard",
+  
   // Duplicates to remove (keep the simpler name)
   "Blue-Eyes White Dragon": "Blue-Eyes",
   "Red-Eyes Black Dragon": "Red-Eyes",

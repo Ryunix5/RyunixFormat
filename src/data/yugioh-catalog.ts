@@ -134,7 +134,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Face Cards", rating: "D", price: 10, imageUrl: getCardImageUrl(14816857) }, // King's Knight
   { name: "F.A.", rating: "C", price: 25, imageUrl: getCardImageUrl(23950192) }, // F.A. Motorhome Transport
   { name: "Fairy Tail", rating: "C", price: 25, imageUrl: getCardImageUrl(86937530) }, // Fairy Tail - Snow
-  { name: "Familiar-Possessed", rating: "C", price: 25, imageUrl: getCardImageUrl(31887905) }, // Familiar-Possessed - Hiita
+  { name: "Charmer", rating: "C", price: 25, imageUrl: getCardImageUrl(31887905) }, // Familiar-Possessed - Hiita
   { name: "Fiendsmith", rating: "S", price: 200, imageUrl: getCardImageUrl(2463794) }, // Fiendsmith's Requiem
   { name: "Fire Fist", rating: "B", price: 50, imageUrl: getCardImageUrl(6353603) }, // Brotherhood of the Fire Fist - Tiger King
   { name: "Fire King", rating: "S", price: 200, imageUrl: getCardImageUrl(59388357) }, // Fire King High Avatar Garunix
@@ -146,7 +146,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Forbidden One (Exodia)", rating: "D", price: 10, imageUrl: getCardImageUrl(33396948) }, // Exodia the Forbidden One
   { name: "Fortune Fairy", rating: "D", price: 10, imageUrl: getCardImageUrl(31683874) }, // Fortune Fairy Ann
   { name: "Fortune Lady", rating: "C", price: 25, imageUrl: getCardImageUrl(27895597) }, // Fortune Lady Every
-  { name: "Fossil Fusion", rating: "C", price: 25, imageUrl: getCardImageUrl(59419719) }, // Fossil Dragon Skullgar
+  { name: "Fossil", rating: "C", price: 25, imageUrl: getCardImageUrl(59419719) }, // Fossil Dragon Skullgar
   { name: "Frightfur", rating: "B", price: 50, imageUrl: getCardImageUrl(34124316) }, // Frightfur Tiger
   { name: "Frog", rating: "B", price: 50, imageUrl: getCardImageUrl(99916754) }, // Toadally Awesome
   { name: "Fur Hire", rating: "C", price: 25, imageUrl: getCardImageUrl(93850652) }, // Folgo, Justice Fur Hire
@@ -159,7 +159,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Gate Guardian", rating: "C", price: 25, imageUrl: getCardImageUrl(25833572) }, // Gate Guardian
   { name: "Gearfried", rating: "D", price: 10, imageUrl: getCardImageUrl(423705) }, // Gearfried the Iron Knight
   { name: "Geargia", rating: "C", price: 25, imageUrl: getCardImageUrl(29087919) }, // Gear Gigant X
-  { name: "Gem-Knight", rating: "B", price: 50, imageUrl: getCardImageUrl(27004302) }, // Gem-Knight Master Diamond
+  { name: "Gem-", rating: "B", price: 50, imageUrl: getCardImageUrl(27004302) }, // Gem-Knight Master Diamond
   { name: "Generaider", rating: "A", price: 100, imageUrl: getCardImageUrl(76382116) }, // Harr, Generaider Boss of Storms
   { name: "Genex", rating: "F", price: 0, imageUrl: getCardImageUrl(61775475) }, // Genex Ally Birdman
   { name: "Ghostrick", rating: "C", price: 25, imageUrl: getCardImageUrl(4939890) }, // Ghostrick Alucard
@@ -177,12 +177,12 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Goyo", rating: "D", price: 10, imageUrl: getCardImageUrl(84224627) }, // Goyo Guardian
   { name: "Gravekeeper's", rating: "C", price: 25, imageUrl: getCardImageUrl(45894482) }, // Gravekeeper's Commandant
   { name: "Graydle", rating: "D", price: 10, imageUrl: getCardImageUrl(66451379) }, // Graydle Dragon
-  { name: "Gunkan Suship", rating: "B", price: 50, imageUrl: getCardImageUrl(83008724) }, // Placeholder
+  { name: "Gunkan", rating: "B", price: 50, imageUrl: getCardImageUrl(83008724) }, // Placeholder
   { name: "Gusto", rating: "D", price: 10, imageUrl: getCardImageUrl(82422049) }, // Daigusto Sphreez
   { name: "Harpie", rating: "B", price: 50, imageUrl: getCardImageUrl(80316585) }, // Harpie's Feather Duster
   { name: "Hazy Flame", rating: "F", price: 0, imageUrl: getCardImageUrl(23776077) }, // Hazy Flame Basiltrice
   { name: "Hecahands", rating: "C", price: 25, imageUrl: getCardImageUrl(95365081) }, // Hecahands Ibtel
-  { name: "Heraldic Beast", rating: "D", price: 10, imageUrl: getCardImageUrl(60316373) }, // Number 18: Heraldry Patriarch
+  { name: "Heraldic", rating: "D", price: 10, imageUrl: getCardImageUrl(60316373) }, // Number 18: Heraldry Patriarch
   { name: "Heroic", rating: "C", price: 25, imageUrl: getCardImageUrl(22404675) }, // Heroic Champion - Excalibur
   { name: "Hieratic", rating: "C", price: 25, imageUrl: getCardImageUrl(88177324) }, // Hieratic Dragon King of Atum
   { name: "Horus", rating: "B", price: 50, imageUrl: getCardImageUrl(95132338) }, // Horus the Black Flame Dragon LV8
@@ -344,7 +344,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Tenyi", rating: "A", price: 100, imageUrl: getCardImageUrl(87052196) }, // Tenyi Spirit - Vishuda
   { name: "T.G.", rating: "B", price: 50, imageUrl: getCardImageUrl(63180841) }, // T.G. Hyper Librarian
   { name: "The Agent", rating: "B", price: 50, imageUrl: getCardImageUrl(91188343) }, // The Agent of Creation - Venus
-  { name: "The Phantom Knights", rating: "A", price: 100, imageUrl: getCardImageUrl(2857636) }, // The Phantom Knights of Break Sword
+  { name: "Phantom Knights", rating: "A", price: 100, imageUrl: getCardImageUrl(2857636) }, // The Phantom Knights of Break Sword
   { name: "The Weather", rating: "B", price: 50, imageUrl: getCardImageUrl(52834429) }, // The Weather Painter Rainbow
   { name: "Therion", rating: "A", price: 100, imageUrl: getCardImageUrl(71832012) }, // Therion "King" Regulus
   { name: "Thunder Dragon", rating: "B", price: 50, imageUrl: getCardImageUrl(31786629) }, // Thunder Dragon Colossus
@@ -426,7 +426,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Wicked Gods", rating: "C", price: 25, imageUrl: getCardImageUrl(86377375) }, // The Wicked Avatar
   { name: "Egyptian Gods", rating: "C", price: 25, imageUrl: getCardImageUrl(89631139) }, // Obelisk the Tormentor
   { name: "Hunder", rating: "D", price: 10, imageUrl: getCardImageUrl(41420027) }, // Vylon Disigma
-  { name: "Trains", rating: "A", price: 100, imageUrl: getCardImageUrl(35094006) }, // Superdreadnought Rail Cannon Gustav Max
+  { name: "Train", rating: "A", price: 100, imageUrl: getCardImageUrl(35094006) }, // Superdreadnought Rail Cannon Gustav Max
   // { name: "Sparrow Family", rating: "F", price: 0, imageUrl: getCardImageUrl(46986414) }, // OCG Only - No TCG Release
   { name: "Malicevorous", rating: "D", price: 10, imageUrl: getCardImageUrl(61791132) }, // Malicevorous Fork
   { name: "Legendary Knight", rating: "C", price: 25, imageUrl: getCardImageUrl(85800949) }, // Legendary Knight Timaeus
