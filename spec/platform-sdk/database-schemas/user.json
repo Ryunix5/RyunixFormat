@@ -1,0 +1,156 @@
+{
+  "id": "102019b61ef25fa7081b8500197d4a3fa3d",
+  "version": "102019b61ef25fa70119c1b25f453667554",
+  "schema": {
+    "name": "user",
+    "description": "Stores user account information including credentials, coin balance, and admin status",
+    "fields": [
+      {
+        "name": "id",
+        "description": "Unique identifier for each user",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal user identification data"
+        }
+      },
+      {
+        "name": "data_creator",
+        "description": "id of the user who creates the record",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        }
+      },
+      {
+        "name": "data_updater",
+        "description": "id of the user who updates the record",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        }
+      },
+      {
+        "name": "create_time",
+        "description": "create time in timestamp unix",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        },
+        "format": "timestamp"
+      },
+      {
+        "name": "update_time",
+        "description": "update time in timestamp unix",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        },
+        "format": "timestamp"
+      },
+      {
+        "name": "username",
+        "description": "Unique username for user login",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal user identification credential"
+        },
+        "taxonomy": {
+          "category": "User Identifier",
+          "subject": "Username for authentication"
+        }
+      },
+      {
+        "name": "password_hash",
+        "description": "Hashed password for user authentication",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 4,
+          "reason": "Sensitive authentication credential requiring highest security"
+        },
+        "taxonomy": {
+          "category": "Authentication",
+          "subject": "User password hash"
+        },
+        "encryption": true,
+        "format": "password"
+      },
+      {
+        "name": "coin",
+        "description": "Current coin balance for the user",
+        "type": 2,
+        "compliance": {
+          "confidentiality": 3,
+          "reason": "User financial data within the system"
+        },
+        "taxonomy": {
+          "category": "Financial",
+          "subject": "User coin balance"
+        },
+        "minimum": 0,
+        "numeric": "int"
+      },
+      {
+        "name": "is_admin",
+        "description": "Flag indicating whether the user has administrator privileges",
+        "type": 3,
+        "compliance": {
+          "confidentiality": 3,
+          "reason": "Security-sensitive role assignment data"
+        },
+        "taxonomy": {
+          "category": "Authorization",
+          "subject": "User role permission"
+        }
+      }
+    ],
+    "indexes": [
+      {
+        "fields": [
+          "id"
+        ],
+        "unique": true,
+        "primary": true
+      },
+      {
+        "fields": [
+          "data_creator"
+        ]
+      },
+      {
+        "fields": [
+          "data_updater"
+        ]
+      },
+      {
+        "fields": [
+          "username"
+        ],
+        "unique": true
+      },
+      {
+        "fields": [
+          "is_admin"
+        ]
+      }
+    ]
+  },
+  "task": {
+    "id": "69505d82ff5145db4db85a3f",
+    "root": "69505d82ff5145db4db85a3f",
+    "project": "69505d82ff5145db4db85a3e",
+    "user": "c8a1a360-3031-70eb-0b84-3c4db877aac5"
+  },
+  "namespace": {
+    "id": "01987547fc6c72ecb453bd2736bd4ea0",
+    "tenant": 2,
+    "name": "global-1",
+    "default": true
+  },
+  "revision": 1
+}

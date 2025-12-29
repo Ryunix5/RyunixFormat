@@ -1,0 +1,3630 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Coins, ShoppingCart, History, User, LogOut, Users, Gift, KeyRound, BarChart3, Save, List, Grid3X3, LayoutGrid, X, Edit3, ChevronDown, ChevronUp, Eye, Search, Plus, Image, Package, Layers, ShoppingBag, Trash2, Star } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { CardModificationsORM } from "@/sdk/database/orm/orm_card_modifications";
+import { PurchaseORM, type PurchaseModel, PurchaseItemType } from "@/sdk/database/orm/orm_purchase";
+import { CoinLogORM, type CoinLogModel } from "@/sdk/database/orm/orm_coin_log";
+import { UserORM, type UserModel } from "@/sdk/database/orm/orm_user";
+import { ARCHETYPE_DECKS, STAPLE_CARDS, type CatalogItem, type MetaRating, META_RATING_PRICES } from "@/data/yugioh-catalog";
+import { hashPassword, verifyPassword, createAuthToken, getAuthToken, setAuthToken, clearAuthToken } from "@/lib/auth";
+import { getUserByUsername } from "@/lib/db";
+import { initializeAdminUser } from "@/lib/init-admin";
+
+export const Route = createFileRoute("/")({
+  component: App,
+});
+
+function App() {
+  const [currentUser, setCurrentUser] = useState<UserModel | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function initialize() {
+      // Initialize admin user if it doesn't exist
+      await initializeAdminUser();
+
+      const token = getAuthToken();
+      if (token) {
+        loadUserData(token.userId);
+      } else {
+        setIsLoading(false);
+      }
+    }
+
+    initialize();
+
+    // Also load persisted card modifications at app startup so player views can see admin changes
+    (async () => {
+      try {
+        const orm = CardModificationsORM.getInstance();
+        const mods = await orm.getMods();
+        if (mods && typeof mods === 'object') {
+          // Load archetype modifications
+          if (mods.archetypes && typeof mods.archetypes === 'object') {
+            Object.assign(cardModifications, mods.archetypes);
+            console.debug('Loaded archetype modifications at app startup', { count: Object.keys(mods.archetypes).length });
+          }
+          // Load custom staples
+          if (Array.isArray(mods.customStaples)) {
+            customStaples.length = 0;
+            customStaples.push(...mods.customStaples);
+            console.debug('Loaded custom staples at app startup', { count: mods.customStaples.length });
+          }
+          // Load removed staples
+          if (Array.isArray(mods.removedStaples)) {
+            removedStaples.clear();
+            mods.removedStaples.forEach((name: string) => removedStaples.add(name));
+            console.debug('Loaded removed staples at app startup', { count: mods.removedStaples.length });
+          }
+          // Notify components to re-render with loaded data
+          notifyModificationChange();
+        }
+      } catch (e) {
+        console.warn('Failed to load card modifications at app startup', e);
+      }
+    })();
+
+    // Listen for cross-tab updates to card modifications (so player views update when admin saves in another tab)
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('ryunix-card-mods');
+        bc.onmessage = async (ev) => {
+          if (ev?.data?.type === 'updated') {
+            try {
+              const orm = CardModificationsORM.getInstance();
+              const mods = await orm.getMods();
+              if (mods && typeof mods === 'object') {
+                // Load archetype modifications
+                if (mods.archetypes && typeof mods.archetypes === 'object') {
+                  // Clear and reload to get latest
+                  Object.keys(cardModifications).forEach(k => delete cardModifications[k]);
+                  Object.assign(cardModifications, mods.archetypes);
+                }
+                // Load custom staples
+                if (Array.isArray(mods.customStaples)) {
+                  customStaples.length = 0;
+                  customStaples.push(...mods.customStaples);
+                }
+                // Load removed staples
+                if (Array.isArray(mods.removedStaples)) {
+                  removedStaples.clear();
+                  mods.removedStaples.forEach((name: string) => removedStaples.add(name));
+                }
+                console.debug('Reloaded modifications from BroadcastChannel');
+                // Trigger re-render without re-persisting (increment version only)
+                modificationVersion++;
+                modificationListeners.forEach(listener => listener());
+              }
+            } catch (e) {
+              console.warn('Error reloading card modifications after broadcast', e);
+            }
+          }
+        };
+        // close on unmount
+        window.addEventListener('beforeunload', () => bc.close());
+      }
+    } catch (e) {
+      console.warn('Failed to initialize BroadcastChannel for card mods', e);
+    }
+  }, []);
+
+  async function loadUserData(userId: string) {
+    try {
+      const userORM = UserORM.getInstance();
+      const users = await userORM.getUserById(userId);
+      if (users.length > 0) {
+        setCurrentUser(users[0]);
+      }
+    } catch (error) {
+      console.error("Failed to load user:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleLogin(user: UserModel) {
+    setCurrentUser(user);
+  }
+
+  function handleLogout() {
+    clearAuthToken();
+    setCurrentUser(null);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div className="text-lg font-semibold text-amber-400 animate-pulse">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
+  if (currentUser.is_admin) {
+    return <AdminDashboard user={currentUser} onLogout={handleLogout} onUserUpdate={loadUserData} />;
+  }
+
+  return <PlayerDashboard user={currentUser} onLogout={handleLogout} onUserUpdate={loadUserData} />;
+}
+
+function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const uname = username.trim();
+      const pwd = password;
+
+      const userRow = await getUserByUsername(uname);
+      if (!userRow) {
+        setError("Invalid username or password");
+        return;
+      }
+
+      const ok = await verifyPassword(pwd, userRow.password_hash);
+      if (!ok) {
+        setError("Invalid username or password");
+        return;
+      }
+
+      // Create and store client token
+      const token = createAuthToken(userRow.id, userRow.username, userRow.is_admin);
+      setAuthToken(token);
+
+      // Load full UserModel via the ORM (if available) and signal login
+      const userORM = UserORM.getInstance();
+      const users = await userORM.getUserById(userRow.id);
+      const userModel = users[0] ?? ({ id: userRow.id, username: userRow.username, password_hash: userRow.password_hash, coin: userRow.coin, is_admin: userRow.is_admin, data_creator: "", data_updater: "", create_time: "", update_time: "" } as UserModel);
+
+      onLogin(userModel);
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err?.message || String(err) || "Login failed");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
+      {/* Decorative elements */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23fbbf24%22%20fill-opacity%3D%220.03%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-amber-500/10 to-transparent rounded-full blur-3xl" />
+
+      <Card className="w-full max-w-md shadow-2xl border-2 border-amber-500/30 bg-slate-900/90 backdrop-blur-xl relative z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent rounded-xl pointer-events-none" />
+        <CardHeader className="space-y-2 pb-6 relative">
+          <div className="flex items-center justify-center mb-2">
+            <div className="size-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <span className="text-2xl font-black text-slate-900">R</span>
+            </div>
+          </div>
+          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent drop-shadow-sm">
+            Ryunix Format
+          </CardTitle>
+          <CardDescription className="text-base text-center text-slate-400">Login to manage your tournament coins and decks</CardDescription>
+        </CardHeader>
+        <CardContent className="relative">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <Alert variant="destructive" className="animate-in fade-in-50 duration-300 bg-red-950/50 border-red-500/50">
+                <AlertDescription className="text-red-200">{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-sm font-semibold text-slate-300">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                disabled={isLoading}
+                className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-semibold text-slate-300">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading}
+                className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20"
+              />
+            </div>
+            <Button type="submit" className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold transition-all duration-300 shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Enter the Arena"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onLogout: () => void; onUserUpdate: (userId: string) => void }) {
+  const [activeTab, setActiveTab] = useState("catalog");
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative">
+      {/* Enhanced Background pattern */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23fbbf24%22%20fill-opacity%3D%220.02%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50 pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b from-amber-500/5 to-transparent pointer-events-none" />
+
+      <header className="bg-slate-900/90 backdrop-blur-xl border-b border-amber-500/30 shadow-2xl shadow-amber-500/10 sticky top-0 z-50 relative">
+        <div className="container mx-auto px-4 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="size-12 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 rounded-xl flex items-center justify-center shadow-xl shadow-amber-500/30 ring-2 ring-amber-400/20">
+              <span className="text-2xl font-black text-slate-900">R</span>
+            </div>
+            <div>
+              <h1 className="text-3xl font-black bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent drop-shadow-lg">Ryunix Format</h1>
+              <p className="text-sm text-slate-400 font-medium mt-0.5">
+                Welcome back, <span className="text-amber-300 font-bold">{user.username}</span> 🎮
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-500/20 px-6 py-3 rounded-xl border border-amber-400/40 shadow-xl shadow-amber-500/20 backdrop-blur-sm">
+              <Coins className="size-6 text-amber-300 drop-shadow-lg" />
+              <div className="flex flex-col">
+                <span className="text-xs text-amber-200/70 font-medium uppercase tracking-wide">Balance</span>
+                <span className="font-black text-2xl text-amber-300 drop-shadow-lg">{user.coin.toLocaleString()}</span>
+              </div>
+            </div>
+            <Button variant="outline" onClick={onLogout} className="border-slate-600 text-slate-300 hover:bg-red-950/50 hover:text-red-300 hover:border-red-500/50 transition-all duration-200 shadow-lg">
+              <LogOut className="size-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-10 relative">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto h-14 bg-slate-800/70 backdrop-blur-md shadow-2xl border border-amber-500/30 rounded-xl p-1">
+            <TabsTrigger value="catalog" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-900 data-[state=active]:font-bold data-[state=active]:shadow-lg data-[state=active]:shadow-amber-500/40 text-slate-400 transition-all duration-300 rounded-lg">
+              <ShoppingBag className="size-5 mr-2" />
+              <span className="text-base">Store</span>
+            </TabsTrigger>
+            <TabsTrigger value="collection" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-900 data-[state=active]:font-bold data-[state=active]:shadow-lg data-[state=active]:shadow-amber-500/40 text-slate-400 transition-all duration-300 rounded-lg">
+              <Package className="size-5 mr-2" />
+              <span className="text-base">Collection</span>
+              My Collection
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="catalog" className="mt-6 animate-in fade-in-50 duration-300">
+            <CatalogTab user={user} onUserUpdate={onUserUpdate} />
+          </TabsContent>
+
+          <TabsContent value="collection" className="mt-6 animate-in fade-in-50 duration-300">
+            <CollectionTab userId={user.id} />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}
+
+// Archetype card fetching state
+interface ArchetypeCard {
+  id: number;
+  name: string;
+  type: string;
+  desc: string;
+  atk?: number;
+  def?: number;
+  level?: number;
+  race: string;
+  attribute?: string;
+  card_images: Array<{ id: number; image_url: string; image_url_small: string; image_url_cropped: string }>;
+}
+
+// Cache for archetype images - fetched dynamically from API
+const archetypeImageCache: Record<string, string> = {};
+// Cache to record archetypes that previously returned no result (to avoid repeated 400 requests)
+const archetypeImageFailCache: Record<string, boolean> = {};
+
+function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (userId: string) => void }) {
+  const [category, setCategory] = useState<"decks" | "staples">("decks");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterRating, setFilterRating] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"list" | "compact" | "grid">("grid");
+  const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [selectedArchetype, setSelectedArchetype] = useState<string | null>(null);
+  const [archetypeCards, setArchetypeCards] = useState<ArchetypeCard[]>([]);
+  const [loadingCards, setLoadingCards] = useState(false);
+  const [cardError, setCardError] = useState("");
+  const [archetypeImages, setArchetypeImages] = useState<Record<string, string>>(archetypeImageCache);
+  // Track which images are currently being fetched to avoid duplicate requests
+  const pendingFetches = useRef<Set<string>>(new Set());
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 24;
+
+  // Persisted admin card modifications (loaded/saved from DB)
+  const [saveState, setSaveState] = useState<'idle'|'saving'|'saved'|'error'>('idle');
+  const saveTimerRef = useRef<number | null>(null);
+  
+  // Listen for modification changes from admin panel
+  const _modVersion = useModificationVersion();
+
+  // Debounced search for performance
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 150);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Helper functions to get admin-modified values
+  const getDisplayName = useCallback((item: CatalogItem): string => {
+    return cardModifications[item.name]?.displayName ?? item.name;
+  }, []);
+
+  const getModifiedRating = useCallback((item: CatalogItem): string => {
+    return cardModifications[item.name]?.rating ?? item.rating;
+  }, []);
+
+  const getModifiedPrice = useCallback((item: CatalogItem): number => {
+    return cardModifications[item.name]?.price ?? item.price;
+  }, []);
+
+  const getModifiedImage = useCallback((item: CatalogItem): string | undefined => {
+    // Priority: admin override > API fetched > catalog hardcoded
+    return cardModifications[item.name]?.imageUrl ?? archetypeImages[item.name] ?? item.imageUrl;
+  }, [archetypeImages]);
+
+  // Use effective staples list (includes admin additions/removals)
+  const items = category === "decks" ? ARCHETYPE_DECKS : getEffectiveStaples();
+  
+  // Memoize filtered items for performance
+  const filteredItems = useMemo(() => items.filter((item) => {
+    const displayName = cardModifications[item.name]?.displayName ?? item.name;
+    const matchesSearch = item.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                          displayName.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+    const currentRating = cardModifications[item.name]?.rating ?? item.rating;
+    const matchesRating = filterRating === "all" || currentRating === filterRating;
+    return matchesSearch && matchesRating;
+  }), [items, debouncedSearchTerm, filterRating]);
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredItems.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredItems, currentPage, itemsPerPage]);
+  
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [category, debouncedSearchTerm, filterRating]);
+  
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
+  // Fetch a single archetype image
+  const fetchArchetypeImage = useCallback(async (archetypeName: string) => {
+    if (archetypeImageCache[archetypeName]) return;
+    if (archetypeImageFailCache[archetypeName]) return;
+    if (pendingFetches.current.has(archetypeName)) return;
+
+    pendingFetches.current.add(archetypeName);
+
+    const tryUrls = [
+      `https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(archetypeName)}`,
+      `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(archetypeName)}`,
+      `https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(archetypeName)}`,
+      `https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(archetypeName)}&num=1&offset=0`,
+      `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(archetypeName)}&num=1&offset=0`,
+    ];
+
+    for (const url of tryUrls) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          let bodyText = "";
+          try { bodyText = await response.text(); } catch (e) {}
+          if (response.status === 400 || bodyText?.includes('No card matching your query')) {
+            archetypeImageFailCache[archetypeName] = true;
+            break;
+          }
+          continue;
+        }
+
+        const data = await response.json();
+        const imageUrl = data?.data?.[0]?.card_images?.[0]?.image_url_small;
+        if (imageUrl) {
+          archetypeImageCache[archetypeName] = imageUrl;
+          setArchetypeImages(prev => ({ ...prev, [archetypeName]: imageUrl }));
+          return;
+        }
+      } catch (err) {
+        console.warn('Archetype image fetch failed', { archetypeName, err });
+      }
+    }
+
+    pendingFetches.current.delete(archetypeName);
+  }, []);
+
+  // Lazy load images as items scroll into view
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const observedElements = useRef<Map<Element, string>>(new Map());
+
+  useEffect(() => {
+    if (category !== "decks") return;
+
+    // Create IntersectionObserver to load images when items come into view
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const archetypeName = observedElements.current.get(entry.target);
+            if (archetypeName && !archetypeImageCache[archetypeName] && !archetypeImageFailCache[archetypeName]) {
+              fetchArchetypeImage(archetypeName);
+            }
+          }
+        });
+      },
+      { rootMargin: '100px', threshold: 0 } // Start loading 100px before item comes into view
+    );
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [category, fetchArchetypeImage]);
+
+  // Callback ref to observe each catalog item
+  const observeItem = useCallback((element: HTMLDivElement | null, itemName: string) => {
+    if (!element || category !== "decks") return;
+    
+    // Already have the image cached, no need to observe
+    if (archetypeImageCache[itemName]) return;
+    
+    observedElements.current.set(element, itemName);
+    observerRef.current?.observe(element);
+  }, [category]);
+
+  // This function is now replaced by getModifiedImage above
+
+  async function handlePurchase(item: CatalogItem) {
+    setError("");
+    setSuccess("");
+    setPurchasing(item.name);
+
+    // Use modified price if admin has changed it
+    const actualPrice = getModifiedPrice(item);
+    const displayName = getDisplayName(item);
+
+    try {
+      // Check if user has enough coins
+      if (user.coin < actualPrice) {
+        setError("Insufficient coins!");
+        return;
+      }
+
+      // Check if already purchased
+      const purchaseORM = PurchaseORM.getInstance();
+      const existing = await purchaseORM.getPurchaseByItemNameUserId(item.name, user.id);
+      if (existing.length > 0) {
+        setError("You already own this item!");
+        return;
+      }
+
+      // Create purchase record
+      const itemType = category === "decks" ? PurchaseItemType.Deck : PurchaseItemType.Staple;
+      await purchaseORM.insertPurchase([
+        {
+          user_id: user.id,
+          item_name: item.name,
+          item_type: itemType,
+          bought_at: String(Math.floor(Date.now() / 1000)),
+        } as unknown as PurchaseModel,
+      ]);
+
+      // Update user coins
+      const userORM = UserORM.getInstance();
+      const updatedUser = { ...user, coin: user.coin - actualPrice };
+      await userORM.setUserById(user.id, updatedUser);
+
+      // Log the purchase
+      const coinLogORM = CoinLogORM.getInstance();
+      await coinLogORM.insertCoinLog([
+        {
+          user_id: user.id,
+          amount: -actualPrice,
+          reason: `Purchased ${displayName}`,
+          // store as unix seconds to match bigint DB column
+          created_at: String(Math.floor(Date.now() / 1000)),
+        } as unknown as CoinLogModel,
+      ]);
+
+      setSuccess(`Successfully purchased ${displayName}!`);
+      onUserUpdate(user.id);
+    } catch (err: any) {
+      console.error('Purchase failed:', err);
+      const msg = err?.message || err?.code || String(err);
+      setError(`Purchase failed: ${msg}`);
+    } finally {
+      setPurchasing(null);
+    }
+  }
+
+  // Player-facing archetype preview (Store tab) - syncs with admin panel changes
+  async function handleArchetypeClick(archetypeName: string) {
+    setSelectedArchetype(archetypeName);
+    setLoadingCards(true);
+    setCardError("");
+    setArchetypeCards([]);
+
+    try {
+      const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+      let baseCards: any[] = [];
+
+      // Priority 1: Check admin's in-memory cache (fastest, reflects admin's current edits)
+      if (archetypeCardsCache[archetypeName]?.length > 0) {
+        baseCards = archetypeCardsCache[archetypeName];
+      } else {
+        // Priority 2: Try loading from local DB (where admin persists changes)
+        try {
+          const dbCards = await dbOrm.getByArchetype(archetypeName, 500);
+          if (dbCards && dbCards.length > 0) {
+            baseCards = dbCards.map((r: any) => {
+              const data = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+              return data;
+            });
+            // Update cache for next time
+            archetypeCardsCache[archetypeName] = baseCards;
+          }
+        } catch (e) {
+          console.warn('Failed to load from DB, falling back to API', e);
+        }
+
+        // Priority 3: Fallback to external API
+        if (baseCards.length === 0) {
+          const urls = [
+            `https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(archetypeName)}&num=200&offset=0`,
+            `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(archetypeName)}&num=200&offset=0`,
+            `https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(archetypeName)}&num=200&offset=0`,
+          ];
+
+          for (const url of urls) {
+            try {
+              const resp = await fetch(url);
+              if (!resp.ok) continue;
+              const data = await resp.json();
+              if (Array.isArray(data.data) && data.data.length > 0) {
+                baseCards = data.data.slice(0, 200);
+                // Cache to DB for future lookups
+                try {
+                  const payload = baseCards.map((c: any) => ({ name: c.name, data: c, archetypes: c.archetype ? [c.archetype] : [archetypeName] }));
+                  await dbOrm.bulkUpsert(payload);
+                  // Also update in-memory cache
+                  archetypeCardsCache[archetypeName] = baseCards;
+                } catch (err) {
+                  console.warn('Failed to cache archetype cards to DB', archetypeName, err);
+                }
+                break;
+              }
+            } catch (err) {
+              console.warn('Archetype fetch failed', { archetypeName, url, err });
+            }
+          }
+        }
+      }
+
+      // Include admin-added custom cards (persisted via card_modifications)
+      try {
+        const rawCustom: any[] = (cardModifications[archetypeName]?.customCards) || [];
+        const customObjs: Array<{ name: string; data?: any }> = rawCustom.map((r) => (typeof r === 'string' ? { name: r } : r));
+        const customNames: string[] = customObjs.map((c) => c.name);
+
+        if (customNames.length > 0) {
+          const customCards: any[] = [];
+          for (const cname of customNames) {
+            try {
+              // Try DB first
+              const dbMatch = await dbOrm.getByName(cname);
+              if (dbMatch) {
+                customCards.push(dbMatch.data);
+                continue;
+              }
+
+              // Try external API and optionally save to DB
+              const r = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(cname)}`);
+              if (r.ok) {
+                const d = await r.json();
+                if (Array.isArray(d.data) && d.data.length > 0) {
+                  customCards.push(d.data[0]);
+                  continue;
+                }
+              }
+
+              // fallback to fname
+              const rf = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(cname)}`);
+              if (rf.ok) {
+                const df = await rf.json();
+                if (Array.isArray(df.data) && df.data.length > 0) {
+                  customCards.push(df.data[0]);
+                }
+              }
+            } catch (err) {
+              console.warn('Failed to resolve custom card', cname, err);
+            }
+          }
+
+          // Append unique custom cards (avoid duplicates by name)
+          const existingNames = new Set(baseCards.map((c: any) => c.name));
+          for (const cc of customCards) {
+            if (!existingNames.has(cc.name)) {
+              baseCards.push(cc);
+              existingNames.add(cc.name);
+            }
+          }
+
+          // Also include any admin-supplied data objects already present in the mods (fast path)
+          for (const obj of customObjs) {
+            if (obj.data && !existingNames.has(obj.name)) {
+              baseCards.push(obj.data);
+              existingNames.add(obj.name);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Error loading custom cards for archetype in CollectionTab', archetypeName, e);
+      }
+
+      setArchetypeCards(baseCards);
+    } catch (err) {
+      console.error('handleArchetypeClick error', err);
+      setCardError("Could not load cards. Try again later.");
+    } finally {
+      setLoadingCards(false);
+    }
+  }
+
+  // Get rating color based on tier
+  function getRatingStyle(rating: string) {
+    switch (rating) {
+      case "S+":
+        return "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/30 border-rose-400";
+      case "S":
+        return "bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 shadow-lg shadow-amber-500/30 border-amber-400";
+      case "A":
+        return "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md shadow-violet-500/20 border-violet-400";
+      case "B":
+        return "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-500/20 border-blue-400";
+      case "C":
+        return "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400";
+      case "D":
+        return "bg-slate-600 text-slate-200 border-slate-500";
+      case "F":
+        return "bg-slate-700 text-slate-400 border-slate-600";
+      default:
+        return "bg-slate-600 text-slate-300 border-slate-500";
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+          <AlertDescription className="text-red-200">{error}</AlertDescription>
+        </Alert>
+      )}
+      {success && (
+        <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 shadow-lg">
+          <AlertDescription className="font-semibold">{success}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+        <div className="flex gap-2">
+          <Button variant={category === "decks" ? "default" : "outline"} onClick={() => setCategory("decks")} className={category === "decks" ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold shadow-lg shadow-amber-500/25" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500/50 hover:text-amber-300 transition-all duration-200"}>
+            Archetype Decks ({ARCHETYPE_DECKS.length})
+          </Button>
+          <Button variant={category === "staples" ? "default" : "outline"} onClick={() => setCategory("staples")} className={category === "staples" ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold shadow-lg shadow-amber-500/25" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500/50 hover:text-amber-300 transition-all duration-200"}>
+            Staple Cards ({getEffectiveStaples().length})
+          </Button>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
+          <div className="relative w-full md:w-48">
+            <Input placeholder="Search items..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pr-8 transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20 shadow-sm" />
+            {searchTerm && (
+              <button type="button" onClick={() => setSearchTerm("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+          <Select value={filterRating} onValueChange={setFilterRating}>
+            <SelectTrigger className="w-28 shadow-sm transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 focus:border-amber-500 focus:ring-amber-500/20">
+              <SelectValue placeholder="Rating" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectItem value="all" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">All</SelectItem>
+              <SelectItem value="S+" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">S+</SelectItem>
+              <SelectItem value="S" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">S</SelectItem>
+              <SelectItem value="A" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">A</SelectItem>
+              <SelectItem value="B" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">B</SelectItem>
+              <SelectItem value="C" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">C</SelectItem>
+              <SelectItem value="D" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">D</SelectItem>
+              <SelectItem value="F" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">F</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-0.5 border border-slate-600 rounded-md p-0.5 bg-slate-800/70">
+            <Button variant="ghost" size="icon" onClick={() => setViewMode("list")} className={`size-8 ${viewMode === "list" ? "bg-amber-500/30 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"}`} title="List View">
+              <List className="size-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setViewMode("compact")} className={`size-8 ${viewMode === "compact" ? "bg-amber-500/30 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"}`} title="Compact View">
+              <Grid3X3 className="size-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setViewMode("grid")} className={`size-8 ${viewMode === "grid" ? "bg-amber-500/30 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"}`} title="Grid View">
+              <LayoutGrid className="size-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats and Info Bar */}
+      <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-slate-800/40 via-slate-800/30 to-slate-800/40 border border-slate-700/50 shadow-inner">
+        <div className="flex items-center gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <Package className="size-4 text-amber-400 animate-pulse" />
+            <span className="text-slate-400">Showing:</span>
+            <span className="font-bold text-amber-300 text-base">{paginatedItems.length}</span>
+            <span className="text-slate-500">/</span>
+            <span className="font-semibold text-slate-300">{filteredItems.length}</span>
+          </div>
+          <div className="h-6 w-px bg-slate-600" />
+          <div className="flex items-center gap-2">
+            <Coins className="size-4 text-amber-400 drop-shadow-lg" />
+            <span className="text-slate-400">Your Balance:</span>
+            <span className="font-bold text-amber-300 text-base">{user.coin.toLocaleString()}</span>
+          </div>
+        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="h-8 px-3 border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-30"
+            >
+              Previous
+            </Button>
+            <div className="flex items-center gap-1 text-sm">
+              <span className="text-slate-400">Page</span>
+              <span className="font-bold text-amber-400">{currentPage}</span>
+              <span className="text-slate-500">/</span>
+              <span className="text-slate-400">{totalPages}</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="h-8 px-3 border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-30"
+            >
+              Next
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* List View */}
+      {viewMode === "list" && (
+        <div className="space-y-2">
+          {paginatedItems.map((item) => {
+            const displayName = getDisplayName(item);
+            const rating = getModifiedRating(item);
+            const price = getModifiedPrice(item);
+            const imageUrl = getModifiedImage(item);
+            return (
+              <div key={item.name} ref={(el) => observeItem(el, item.name)} className="flex items-center gap-4 p-3 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors">
+                {imageUrl && (
+                  <div className="shrink-0 size-10 rounded overflow-hidden border border-slate-600/50 bg-slate-700/50">
+                    <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  {category === "decks" ? (
+                    <span className="font-semibold text-slate-100 truncate cursor-pointer hover:text-amber-300 transition-colors flex items-center gap-1" onClick={() => handleArchetypeClick(item.name)} title="Click to view cards">
+                      {displayName}
+                      <Eye className="size-3 text-slate-500" />
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-slate-100 truncate">{displayName}</span>
+                  )}
+                </div>
+                <Badge className={`font-bold shrink-0 ${getRatingStyle(rating)}`}>{rating}</Badge>
+                <div className="flex items-center gap-1.5 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/30">
+                  <Coins className="size-3.5 text-amber-400" />
+                  <span className="font-bold text-amber-300 text-sm">{price}</span>
+                </div>
+                <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold disabled:opacity-50 text-xs px-3">
+                  {purchasing === item.name ? "..." : "Buy"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Compact View */}
+      {viewMode === "compact" && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {paginatedItems.map((item) => {
+            const displayName = getDisplayName(item);
+            const rating = getModifiedRating(item);
+            const price = getModifiedPrice(item);
+            const imageUrl = getModifiedImage(item);
+            return (
+              <div key={item.name} ref={(el) => observeItem(el, item.name)} className="p-3 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  {imageUrl && (
+                    <div className="shrink-0 size-8 rounded overflow-hidden border border-slate-600/50 bg-slate-700/50">
+                      <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    </div>
+                  )}
+                  <Badge className={`font-bold text-xs ${getRatingStyle(rating)}`}>{rating}</Badge>
+                </div>
+                {category === "decks" ? (
+                  <span className="font-semibold text-sm text-slate-100 truncate cursor-pointer hover:text-amber-300 transition-colors" onClick={() => handleArchetypeClick(item.name)} title={displayName}>
+                    {displayName}
+                  </span>
+                ) : (
+                  <span className="font-semibold text-sm text-slate-100 truncate" title={displayName}>{displayName}</span>
+                )}
+                <div className="flex items-center justify-between mt-auto">
+                  <div className="flex items-center gap-1 text-amber-300">
+                    <Coins className="size-3" />
+                    <span className="text-sm font-bold">{price}</span>
+                  </div>
+                  <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold disabled:opacity-50 text-xs h-7 px-2">
+                    {purchasing === item.name ? "..." : "Buy"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Grid View */}
+      {viewMode === "grid" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {paginatedItems.map((item) => {
+            const displayName = getDisplayName(item);
+            const rating = getModifiedRating(item);
+            const price = getModifiedPrice(item);
+            const imageUrl = getModifiedImage(item);
+            return (
+              <Card key={item.name} ref={(el) => observeItem(el, item.name)} className="hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 hover:-translate-y-1 border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm group overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none" />
+                <CardHeader className="pb-3 relative">
+                  <div className="flex items-start gap-3">
+                    {imageUrl && (
+                      <div className="shrink-0 size-16 rounded-lg overflow-hidden border border-slate-600/50 bg-slate-700/50 shadow-md">
+                        <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        {category === "decks" ? (
+                          <CardTitle className="text-lg font-bold text-slate-100 truncate cursor-pointer hover:text-amber-300 transition-colors flex items-center gap-1" onClick={() => handleArchetypeClick(item.name)} title="Click to view cards in this archetype">
+                            {displayName}
+                            <Eye className="size-3 text-slate-500" />
+                          </CardTitle>
+                        ) : (
+                          <CardTitle className="text-lg font-bold text-slate-100 truncate">{displayName}</CardTitle>
+                        )}
+                        <Badge className={`font-bold shrink-0 ${getRatingStyle(rating)}`}>{rating}</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="relative">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/30">
+                      <Coins className="size-4 text-amber-400" />
+                      <span className="font-bold text-amber-300">{price}</span>
+                    </div>
+                    <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-amber-500/25">
+                      {purchasing === item.name ? "..." : "Buy"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {filteredItems.length === 0 && (
+        <div className="text-center py-24 text-slate-400 bg-gradient-to-br from-slate-800/40 to-slate-800/20 rounded-xl border border-dashed border-slate-700/50 shadow-inner">
+          <Package className="size-16 mx-auto mb-4 text-slate-600 opacity-50" />
+          <p className="text-lg font-semibold text-slate-300 mb-2">No items found</p>
+          <p className="text-sm">Try adjusting your search or filter criteria</p>
+        </div>
+      )}
+
+      {/* Bottom Pagination */}
+      {totalPages > 1 && filteredItems.length > 0 && (
+        <div className="flex justify-center items-center gap-3 pt-4">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="h-9 px-3 border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-30"
+          >
+            First
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="h-9 px-4 border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-30"
+          >
+            Previous
+          </Button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-600">
+            <span className="text-slate-400 text-sm">Page</span>
+            <span className="font-bold text-amber-400 text-lg">{currentPage}</span>
+            <span className="text-slate-500">/</span>
+            <span className="text-slate-300 font-semibold">{totalPages}</span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="h-9 px-4 border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-30"
+          >
+            Next
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="h-9 px-3 border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-30"
+          >
+            Last
+          </Button>
+        </div>
+      )}
+
+      <Dialog open={selectedArchetype !== null} onOpenChange={(open) => { if (!open) setSelectedArchetype(null); }}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-amber-400">{selectedArchetype ? (cardModifications[selectedArchetype]?.displayName || selectedArchetype) : ''} Cards</DialogTitle>
+            <DialogDescription className="text-slate-400">Cards that belong to the {selectedArchetype ? (cardModifications[selectedArchetype]?.displayName || selectedArchetype) : ''} archetype</DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh] pr-2">
+            {loadingCards && (
+              <div className="text-center py-12 text-amber-400 animate-pulse">Loading archetype cards...</div>
+            )}
+            {cardError && (
+              <div className="text-center py-12 text-red-400">{cardError}</div>
+            )}
+            {!loadingCards && !cardError && archetypeCards.length === 0 && (
+              <div className="text-center py-12 text-slate-400">No cards found for this archetype.</div>
+            )}
+            {!loadingCards && archetypeCards.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {archetypeCards.map((card) => (
+                  <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors">
+                    {card.card_images?.[0]?.image_url_small && (
+                      <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
+                        <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    )}
+                    <div className="text-xs font-semibold text-slate-100 truncate" title={card.name}>{card.name}</div>
+                    <div className="text-xs text-slate-400 truncate">{card.type}</div>
+                    {card.atk !== undefined && (
+                      <div className="text-xs text-amber-400">ATK: {card.atk} {card.def !== undefined && `/ DEF: ${card.def}`}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+type AllCardsViewMode = "grid" | "list";
+type CardTypeFilter = "all" | "monster" | "spell" | "trap";
+
+function CollectionTab({ userId }: { userId: string }) {
+  const [purchases, setPurchases] = useState<PurchaseModel[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeView, setActiveView] = useState<"history" | "allCards">("history");
+  const [selectedArchetype, setSelectedArchetype] = useState<string | null>(null);
+  const [archetypeCards, setArchetypeCards] = useState<ArchetypeCard[]>([]);
+  const [loadingCards, setLoadingCards] = useState(false);
+  const [cardError, setCardError] = useState("");
+  const [allOwnedCards, setAllOwnedCards] = useState<ArchetypeCard[]>([]);
+  const [loadingAllCards, setLoadingAllCards] = useState(false);
+  const [allCardsError, setAllCardsError] = useState("");
+
+  // New state for All My Cards view mode and filters
+  const [allCardsViewMode, setAllCardsViewMode] = useState<AllCardsViewMode>("grid");
+  const [cardTypeFilter, setCardTypeFilter] = useState<CardTypeFilter>("all");
+  const [archetypeFilter, setArchetypeFilter] = useState<string>("all");
+  const [cardSearchTerm, setCardSearchTerm] = useState("");
+  
+  // Pagination for purchase history
+  const [historyPage, setHistoryPage] = useState(1);
+  const historyPerPage = 20;
+
+  // Ref to allow BroadcastChannel callback to reload current archetype
+  const handleArchetypeClickRef = useRef<(name: string) => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    loadPurchases();
+  }, [userId]);
+
+  async function loadPurchases() {
+    try {
+      const purchaseORM = PurchaseORM.getInstance();
+      const data = await purchaseORM.getPurchaseByUserId(userId);
+      // Sort by unix timestamp (numeric comparison, not Date parse)
+      setPurchases(data.sort((a, b) => Number(b.bought_at) - Number(a.bought_at)));
+    } catch (error) {
+      console.error("Failed to load purchases:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleArchetypeClick(archetypeName: string) {
+    setSelectedArchetype(archetypeName);
+    setLoadingCards(true);
+    setCardError("");
+    setArchetypeCards([]);
+
+    try {
+      const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+      let baseCards: any[] = [];
+
+      // Priority 1: Check admin's in-memory cache (fastest, reflects admin's current edits)
+      if (archetypeCardsCache[archetypeName]?.length > 0) {
+        baseCards = [...archetypeCardsCache[archetypeName]];
+      } else {
+        // Priority 2: Try DB first
+        try {
+          const dbCards = await dbOrm.getByArchetype(archetypeName, 500);
+          if (dbCards && dbCards.length > 0) {
+            baseCards = dbCards.map((r: any) => {
+              // r.data may be a string if previously stored incorrectly; normalize here as well
+              if (typeof r.data === 'string') {
+                try { return JSON.parse(r.data); } catch (e) { console.warn('handleArchetypeClick: failed to parse db card data', { archetypeName, name: r.name, err: e }); return r.data; }
+              }
+              return r.data;
+            });
+            // Update cache for next time
+            archetypeCardsCache[archetypeName] = baseCards;
+          }
+        } catch (e) {
+          console.warn('Card DB lookup failed, falling back to external API', e);
+        }
+
+        // Priority 3: If DB had no results, fall back to external API and populate DB
+        if (baseCards.length === 0) {
+          const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(archetypeName)}`);
+          if (!response.ok) {
+            const nameResponse = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(archetypeName)}`);
+            if (nameResponse.ok) {
+              const nameData = await nameResponse.json();
+              baseCards = nameData.data?.slice(0, 50) || [];
+            } else {
+              baseCards = [];
+            }
+          } else {
+            const data = await response.json();
+            baseCards = data.data?.slice(0, 50) || [];
+          }
+
+          // Persist whatever we fetched to DB so subsequent views are fast
+          try {
+            if (baseCards.length > 0) {
+              const payload = baseCards.map((c: any) => ({ name: c.name, data: c, archetypes: c.archetype ? [c.archetype] : [] }));
+              await dbOrm.bulkUpsert(payload);
+              // Update in-memory cache
+              archetypeCardsCache[archetypeName] = baseCards;
+            }
+          } catch (e) {
+            console.warn('Failed to bulk upsert archetype cards to DB', e);
+          }
+        }
+      }
+
+      // Include admin-added custom cards (persisted via card_modifications)
+      try {
+        const rawCustom: any[] = (cardModifications[archetypeName]?.customCards) || [];
+        const customObjs: Array<{ name: string; data?: any }> = rawCustom.map((r) => (typeof r === 'string' ? { name: r } : r));
+        const customNames: string[] = customObjs.map((c) => c.name);
+        if (customNames.length > 0) {
+          const customCards: any[] = [];
+          for (const cname of customNames) {
+            try {
+              // Try DB first
+              const dbMatch = await dbOrm.getByName(cname);
+              if (dbMatch) {
+                customCards.push(dbMatch.data);
+                continue;
+              }
+
+              // Try external API lookup and optionally save to DB for next time
+              const r = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(cname)}`);
+              if (r.ok) {
+                const d = await r.json();
+                if (Array.isArray(d.data) && d.data.length > 0) {
+                  customCards.push(d.data[0]);
+                  try {
+                    await dbOrm.bulkUpsert([{ name: d.data[0].name, data: d.data[0], archetypes: d.data[0].archetype ? [d.data[0].archetype] : [] }]);
+                  } catch (e) {
+                    console.warn('Failed to upsert custom card to DB', cname, e);
+                  }
+                  continue;
+                }
+              }
+
+              // fallback to fname
+              const rf = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(cname)}`);
+              if (rf.ok) {
+                const df = await rf.json();
+                if (Array.isArray(df.data) && df.data.length > 0) {
+                  customCards.push(df.data[0]);
+                  try {
+                    await dbOrm.bulkUpsert([{ name: df.data[0].name, data: df.data[0], archetypes: df.data[0].archetype ? [df.data[0].archetype] : [] }]);
+                  } catch (e) {
+                    console.warn('Failed to upsert custom card to DB', cname, e);
+                  }
+                }
+              }
+            } catch (err) {
+              console.warn('Failed to resolve custom card', cname, err);
+            }
+          }
+          // Append unique custom cards (avoid duplicates by name)
+          const existingNames = new Set(baseCards.map((c: any) => c.name));
+          for (const cc of customCards) {
+            if (!existingNames.has(cc.name)) baseCards.push(cc);
+          }
+
+          // Also include any admin-supplied data objects already present in the mods (fast path)
+          for (const obj of customObjs) {
+            if (obj.data && !existingNames.has(obj.name)) baseCards.push(obj.data);
+          }
+        }
+      } catch (e) {
+        console.warn('Error loading custom cards for archetype', archetypeName, e);
+      }
+
+      setArchetypeCards(baseCards);
+    } catch (err) {
+      console.error(err);
+      setCardError("Could not load cards. Try again later.");
+    } finally {
+      setLoadingCards(false);
+    }
+  }
+
+  // Update the ref whenever handleArchetypeClick is redefined
+  useEffect(() => {
+    handleArchetypeClickRef.current = handleArchetypeClick;
+  }, []);
+
+  // Listen for broadcast updates when admin adds cards to an archetype
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+
+    const bc = new BroadcastChannel('ryunix-card-mods');
+    const handler = (event: MessageEvent) => {
+      try {
+        if (event.data?.type === 'cards-updated' && selectedArchetype && handleArchetypeClickRef.current) {
+          const { archetype } = event.data;
+          // If the message is for the currently displayed archetype, reload it
+          if (archetype === selectedArchetype || !archetype) {
+            console.debug('[CollectionTab] Received cards-updated broadcast, reloading archetype', { archetype, selectedArchetype });
+            handleArchetypeClickRef.current(selectedArchetype);
+          }
+        }
+      } catch (e) {
+        console.warn('[CollectionTab] Error handling cards-updated broadcast', e);
+      }
+    };
+
+    bc.addEventListener('message', handler);
+    return () => {
+      bc.removeEventListener('message', handler);
+      bc.close();
+    };
+  }, [selectedArchetype]);
+
+  // Fetch all individual cards when switching to allCards view
+  useEffect(() => {
+    if (activeView === "allCards" && purchases.length > 0 && allOwnedCards.length === 0 && !loadingAllCards) {
+      loadAllOwnedCards();
+    }
+  }, [activeView, purchases]);
+
+  // Extended type to track source archetype
+  interface OwnedCard extends ArchetypeCard {
+    sourceArchetype?: string;
+  }
+
+  async function loadAllOwnedCards() {
+    setLoadingAllCards(true);
+    setAllCardsError("");
+    const allCards: OwnedCard[] = [];
+
+    // Get archetype and staple name sets for accurate type detection
+    const archetypeNames = new Set(ARCHETYPE_DECKS.map(d => d.name));
+    const stapleNames = new Set(STAPLE_CARDS.map(s => s.name));
+
+    // Process all purchases - determine type by checking against known lists
+    for (const purchase of purchases) {
+      const isArchetype = archetypeNames.has(purchase.item_name);
+      const isStaple = stapleNames.has(purchase.item_name);
+
+      if (isArchetype) {
+        // Fetch archetype cards
+        try {
+          const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(purchase.item_name)}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data) {
+              const cardsWithSource = data.data.map((card: ArchetypeCard) => ({
+                ...card,
+                sourceArchetype: purchase.item_name,
+              }));
+              allCards.push(...cardsWithSource);
+            }
+          } else {
+            // Try fallback with fname
+            const nameResponse = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(purchase.item_name)}`);
+            if (nameResponse.ok) {
+              const nameData = await nameResponse.json();
+              if (nameData.data) {
+                const cardsWithSource = nameData.data.slice(0, 30).map((card: ArchetypeCard) => ({
+                  ...card,
+                  sourceArchetype: purchase.item_name,
+                }));
+                allCards.push(...cardsWithSource);
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to fetch cards for ${purchase.item_name}:`, err);
+        }
+      } else if (isStaple) {
+        // Fetch staple card by exact name
+        try {
+          const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(purchase.item_name)}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data) {
+              const cardsWithSource = data.data.map((card: ArchetypeCard) => ({
+                ...card,
+                sourceArchetype: "Staples",
+              }));
+              allCards.push(...cardsWithSource);
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to fetch staple card ${purchase.item_name}:`, err);
+        }
+      } else {
+        // Unknown item - try archetype first, then name
+        try {
+          const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(purchase.item_name)}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data && data.data.length > 0) {
+              const cardsWithSource = data.data.map((card: ArchetypeCard) => ({
+                ...card,
+                sourceArchetype: purchase.item_name,
+              }));
+              allCards.push(...cardsWithSource);
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to fetch unknown item ${purchase.item_name}:`, err);
+        }
+      }
+    }
+
+    if (allCards.length === 0 && purchases.length > 0) {
+      setAllCardsError("Could not load your cards. Try again later.");
+    }
+
+    // Remove duplicates by card id (keep first occurrence)
+    const uniqueCards = allCards.filter((card, index, self) =>
+      index === self.findIndex((c) => c.id === card.id)
+    );
+
+    setAllOwnedCards(uniqueCards);
+    setLoadingAllCards(false);
+  }
+
+  // Get unique archetypes for filter dropdown
+  function getOwnedArchetypes(): string[] {
+    const archetypes = new Set<string>();
+    allOwnedCards.forEach((card) => {
+      if ((card as OwnedCard).sourceArchetype) {
+        archetypes.add((card as OwnedCard).sourceArchetype!);
+      }
+    });
+    return Array.from(archetypes).sort();
+  }
+
+  // Filter cards based on current filters
+  function getFilteredCards(): ArchetypeCard[] {
+    return allOwnedCards.filter((card) => {
+      // Search filter
+      if (cardSearchTerm && !card.name.toLowerCase().includes(cardSearchTerm.toLowerCase())) {
+        return false;
+      }
+
+      // Card type filter
+      if (cardTypeFilter !== "all") {
+        const cardType = card.type.toLowerCase();
+        if (cardTypeFilter === "monster" && !cardType.includes("monster")) return false;
+        if (cardTypeFilter === "spell" && !cardType.includes("spell")) return false;
+        if (cardTypeFilter === "trap" && !cardType.includes("trap")) return false;
+      }
+
+      // Archetype filter
+      if (archetypeFilter !== "all") {
+        if ((card as OwnedCard).sourceArchetype !== archetypeFilter) return false;
+      }
+
+      return true;
+    });
+  }
+
+  const filteredOwnedCards = getFilteredCards();
+  const ownedArchetypes = getOwnedArchetypes();
+
+  // Helper to get display name from admin modifications
+  function getPurchaseDisplayName(itemName: string): string {
+    return cardModifications[itemName]?.displayName ?? itemName;
+  }
+
+  if (isLoading) {
+    return <div className="text-center py-12 text-amber-400 animate-pulse">Loading your collection...</div>;
+  }
+
+  if (purchases.length === 0) {
+    return (
+      <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+        <CardContent className="py-16 text-center">
+          <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 size-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
+            <ShoppingCart className="size-10 text-amber-400" />
+          </div>
+          <p className="text-lg font-semibold text-slate-200">You haven't purchased any items yet.</p>
+          <p className="text-sm mt-2 text-slate-400">Start shopping from the Catalog tab!</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const decks = purchases.filter((p) => p.item_type === PurchaseItemType.Deck);
+  const staples = purchases.filter((p) => p.item_type === PurchaseItemType.Staple);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <Card className="border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-amber-600/5 shadow-lg hover:shadow-amber-500/10 transition-all duration-300">
+          <CardHeader>
+            <CardTitle className="text-amber-400">Total Items</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">{purchases.length}</div>
+          </CardContent>
+        </Card>
+        <Card className="border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
+          <CardHeader>
+            <CardTitle className="text-blue-400">Decks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-blue-400">{decks.length}</div>
+          </CardContent>
+        </Card>
+        <Card className="border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-purple-500/5 shadow-lg hover:shadow-violet-500/10 transition-all duration-300">
+          <CardHeader>
+            <CardTitle className="text-violet-400">Staples</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-violet-400">{staples.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* View Toggle */}
+      <div className="flex gap-2">
+        <Button variant={activeView === "history" ? "default" : "outline"} onClick={() => setActiveView("history")} className={activeView === "history" ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold shadow-lg shadow-amber-500/25" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500/50 hover:text-amber-300 transition-all duration-200"}>
+          <History className="size-4 mr-2" />
+          Purchase History
+        </Button>
+        <Button variant={activeView === "allCards" ? "default" : "outline"} onClick={() => setActiveView("allCards")} className={activeView === "allCards" ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold shadow-lg shadow-amber-500/25" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500/50 hover:text-amber-300 transition-all duration-200"}>
+          <Layers className="size-4 mr-2" />
+          All My Cards
+        </Button>
+      </div>
+
+      {activeView === "history" && (
+        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">Purchase History</CardTitle>
+            <CardDescription className="text-slate-400">Click on an archetype name to view the cards in that package</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Pagination Info */}
+            {purchases.length > historyPerPage && (
+              <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-slate-700/30 border border-slate-600/50">
+                <div className="flex items-center gap-2 text-sm">
+                  <History className="size-4 text-amber-400" />
+                  <span className="text-slate-400">Total Purchases:</span>
+                  <span className="font-bold text-amber-300">{purchases.length}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                    disabled={historyPage === 1}
+                    className="h-8 px-3 border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-30"
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-slate-400">Page {historyPage} of {Math.ceil(purchases.length / historyPerPage)}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setHistoryPage(p => Math.min(Math.ceil(purchases.length / historyPerPage), p + 1))}
+                    disabled={historyPage === Math.ceil(purchases.length / historyPerPage)}
+                    className="h-8 px-3 border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-30"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+            <Table>
+              <TableHeader>
+                <TableRow className="border-slate-700">
+                  <TableHead className="font-bold text-slate-300">Item Name</TableHead>
+                  <TableHead className="font-bold text-slate-300">Type</TableHead>
+                  <TableHead className="font-bold text-slate-300">Purchase Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {purchases.slice((historyPage - 1) * historyPerPage, historyPage * historyPerPage).map((purchase) => {
+                  const displayName = getPurchaseDisplayName(purchase.item_name);
+                  // Determine type by checking against known lists (handles corrupted item_type data)
+                  const archetypeNames = new Set(ARCHETYPE_DECKS.map(d => d.name.toLowerCase().trim()));
+                  const isDeck = archetypeNames.has((purchase.item_name || "").toLowerCase().trim()) || 
+                                 purchase.item_type === PurchaseItemType.Deck || 
+                                 purchase.item_type === "Deck" as any;
+                  // Format date from unix timestamp
+                  const formatPurchaseDate = (timestamp: string | number): string => {
+                    const ts = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
+                    if (isNaN(ts)) return "Unknown";
+                    const ms = ts < 10000000000 ? ts * 1000 : ts;
+                    return new Date(ms).toLocaleDateString();
+                  };
+                  return (
+                    <TableRow key={purchase.id} className="border-slate-700/50 hover:bg-slate-700/30 transition-colors duration-200">
+                      <TableCell>
+                        {isDeck ? (
+                          <span className="font-semibold text-slate-100 cursor-pointer hover:text-amber-300 transition-colors flex items-center gap-1" onClick={() => handleArchetypeClick(purchase.item_name)} title="Click to view cards in this archetype">
+                            {displayName}
+                            <Package className="size-3 text-slate-500" />
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-slate-100">{displayName}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={isDeck ? "bg-blue-500/20 text-blue-300 border-blue-500/30" : "bg-violet-500/20 text-violet-300 border-violet-500/30"}>{isDeck ? "Deck" : "Staple"}</Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-400">{formatPurchaseDate(purchase.bought_at)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeView === "allCards" && (
+        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">All My Cards ({filteredOwnedCards.length}{filteredOwnedCards.length !== allOwnedCards.length ? ` of ${allOwnedCards.length}` : ""})</CardTitle>
+            <CardDescription className="text-slate-400">All individual cards from your purchased archetypes and staples</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Filters and View Mode Toggle */}
+            {!loadingAllCards && allOwnedCards.length > 0 && (
+              <div className="flex flex-col md:flex-row gap-3 mb-4 pb-4 border-b border-slate-700/50">
+                <Input
+                  placeholder="Search cards..."
+                  value={cardSearchTerm}
+                  onChange={(e) => setCardSearchTerm(e.target.value)}
+                  className="w-full md:w-48 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20"
+                />
+                <Select value={cardTypeFilter} onValueChange={(value) => setCardTypeFilter(value as CardTypeFilter)}>
+                  <SelectTrigger className="w-full md:w-32 bg-slate-800/50 border-slate-700 text-slate-100">
+                    <SelectValue placeholder="Card Type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700">
+                    <SelectItem value="all" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">All Types</SelectItem>
+                    <SelectItem value="monster" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Monsters</SelectItem>
+                    <SelectItem value="spell" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Spells</SelectItem>
+                    <SelectItem value="trap" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Traps</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={archetypeFilter} onValueChange={setArchetypeFilter}>
+                  <SelectTrigger className="w-full md:w-40 bg-slate-800/50 border-slate-700 text-slate-100">
+                    <SelectValue placeholder="Archetype" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700 max-h-60">
+                    <SelectItem value="all" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">All Archetypes</SelectItem>
+                    {ownedArchetypes.map((arch) => (
+                      <SelectItem key={arch} value={arch} className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">{arch}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-0.5 border border-slate-600 rounded-md p-0.5 bg-slate-800/70 ml-auto">
+                  <Button variant="ghost" size="icon" onClick={() => setAllCardsViewMode("grid")} className={`size-8 ${allCardsViewMode === "grid" ? "bg-amber-500/30 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"}`} title="Grid View">
+                    <LayoutGrid className="size-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setAllCardsViewMode("list")} className={`size-8 ${allCardsViewMode === "list" ? "bg-amber-500/30 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"}`} title="List View">
+                    <List className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {loadingAllCards && (
+              <div className="text-center py-12 text-amber-400 animate-pulse">Loading your cards...</div>
+            )}
+            {allCardsError && !loadingAllCards && (
+              <div className="text-center py-12 text-red-400">{allCardsError}</div>
+            )}
+            {!loadingAllCards && !allCardsError && allOwnedCards.length === 0 && (
+              <div className="text-center py-12 text-slate-400">No cards found in your collection.</div>
+            )}
+            {!loadingAllCards && allOwnedCards.length > 0 && filteredOwnedCards.length === 0 && (
+              <div className="text-center py-12 text-slate-400">No cards match your filters.</div>
+            )}
+
+            {/* Grid View */}
+            {!loadingAllCards && filteredOwnedCards.length > 0 && allCardsViewMode === "grid" && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredOwnedCards.map((card) => (
+                  <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30 transition-colors">
+                    {card.card_images?.[0]?.image_url_small && (
+                      <div className="w-full aspect-[3/4] rounded-lg overflow-hidden border border-slate-600/50 bg-slate-700/50 shadow-md mb-2">
+                        <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    )}
+                    <div className="text-xs font-semibold text-slate-100 truncate" title={card.name}>{card.name}</div>
+                    <div className="text-xs text-slate-400 truncate">{card.type}</div>
+                    {(card as { sourceArchetype?: string }).sourceArchetype && (
+                      <div className="text-xs text-violet-400 truncate">{(card as { sourceArchetype?: string }).sourceArchetype}</div>
+                    )}
+                    {card.atk !== undefined && (
+                      <div className="text-xs text-amber-400">ATK: {card.atk} {card.def !== undefined && `/ DEF: ${card.def}`}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* List View */}
+            {!loadingAllCards && filteredOwnedCards.length > 0 && allCardsViewMode === "list" && (
+              <div className="space-y-2">
+                {filteredOwnedCards.map((card) => (
+                  <div key={card.id} className="flex items-center gap-3 p-2 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30 transition-colors">
+                    {card.card_images?.[0]?.image_url_small && (
+                      <div className="shrink-0 size-12 rounded-lg overflow-hidden border border-slate-600/50 bg-slate-700/50 shadow-md">
+                        <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-slate-100 truncate">{card.name}</div>
+                      <div className="text-xs text-slate-400">{card.type}</div>
+                    </div>
+                    {(card as { sourceArchetype?: string }).sourceArchetype && (
+                      <Badge variant="outline" className="shrink-0 text-xs border-violet-500/30 text-violet-300">{(card as { sourceArchetype?: string }).sourceArchetype}</Badge>
+                    )}
+                    {card.atk !== undefined && (
+                      <div className="shrink-0 text-xs text-amber-400 font-medium">ATK: {card.atk}{card.def !== undefined && ` / DEF: ${card.def}`}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={selectedArchetype !== null} onOpenChange={(open) => { if (!open) setSelectedArchetype(null); }}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-amber-400">{selectedArchetype ? (cardModifications[selectedArchetype]?.displayName || selectedArchetype) : ''} Cards</DialogTitle>
+            <DialogDescription className="text-slate-400">Cards that belong to the {selectedArchetype ? (cardModifications[selectedArchetype]?.displayName || selectedArchetype) : ''} archetype</DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh] pr-2">
+            {loadingCards && (
+              <div className="text-center py-12 text-amber-400 animate-pulse">Loading archetype cards...</div>
+            )}
+            {cardError && (
+              <div className="text-center py-12 text-red-400">{cardError}</div>
+            )}
+            {!loadingCards && !cardError && archetypeCards.length === 0 && (
+              <div className="text-center py-12 text-slate-400">No cards found for this archetype.</div>
+            )}
+            {!loadingCards && archetypeCards.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {archetypeCards.map((card) => (
+                  <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors">
+                    {card.card_images?.[0]?.image_url_small && (
+                      <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
+                        <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    )}
+                    <div className="text-xs font-semibold text-slate-100 truncate" title={card.name}>{card.name}</div>
+                    <div className="text-xs text-slate-400 truncate">{card.type}</div>
+                    {card.atk !== undefined && (
+                      <div className="text-xs text-amber-400">ATK: {card.atk} {card.def !== undefined && `/ DEF: ${card.def}`}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onLogout: () => void; onUserUpdate: (userId: string) => void }) {
+  const [activeTab, setActiveTab] = useState("create-user");
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative">
+      {/* Background pattern */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23fbbf24%22%20fill-opacity%3D%220.02%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50 pointer-events-none" />
+
+      <header className="bg-slate-900/80 backdrop-blur-md border-b border-rose-500/20 shadow-lg shadow-rose-500/5 sticky top-0 z-50 relative">
+        <div className="container mx-auto px-4 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="size-10 bg-gradient-to-br from-rose-500 to-rose-700 rounded-lg flex items-center justify-center shadow-lg shadow-rose-500/20">
+              <span className="text-xl font-black text-white">A</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-rose-400 via-rose-300 to-rose-400 bg-clip-text text-transparent">Admin Dashboard</h1>
+              <p className="text-sm text-slate-400 font-medium">Welcome, <span className="text-rose-400">{user.username}</span> (Administrator)</p>
+            </div>
+          </div>
+          <Button variant="outline" onClick={onLogout} className="border-slate-700 text-slate-300 hover:bg-red-950/50 hover:text-red-400 hover:border-red-500/50 transition-all duration-200">
+            <LogOut className="size-4 mr-2" />
+            Logout
+          </Button>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 relative">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 max-w-6xl h-auto md:h-12 bg-slate-800/50 backdrop-blur-sm shadow-lg border border-rose-500/20 p-1">
+            <TabsTrigger value="create-user" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+              <Users className="size-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Create User</span>
+              <span className="sm:hidden">Create</span>
+            </TabsTrigger>
+            <TabsTrigger value="grant-coins" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+              <Gift className="size-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Grant Coins</span>
+              <span className="sm:hidden">Grant</span>
+            </TabsTrigger>
+            <TabsTrigger value="reset-password" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+              <KeyRound className="size-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Reset Password</span>
+              <span className="sm:hidden">Reset</span>
+            </TabsTrigger>
+            <TabsTrigger value="coin-history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+              <BarChart3 className="size-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Coin History</span>
+              <span className="sm:hidden">History</span>
+            </TabsTrigger>
+            <TabsTrigger value="purchase-log" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+              <ShoppingBag className="size-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Purchase Log</span>
+              <span className="sm:hidden">Purchases</span>
+            </TabsTrigger>
+            <TabsTrigger value="archetype-cards" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+              <Layers className="size-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Archetypes</span>
+              <span className="sm:hidden">Archetypes</span>
+            </TabsTrigger>
+            <TabsTrigger value="staples-manage" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+              <Star className="size-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Staples</span>
+              <span className="sm:hidden">Staples</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="create-user" className="mt-6 animate-in fade-in-50 duration-300">
+            <CreateUserTab />
+          </TabsContent>
+
+          <TabsContent value="grant-coins" className="mt-6 animate-in fade-in-50 duration-300">
+            <GrantCoinsTab />
+          </TabsContent>
+
+          <TabsContent value="reset-password" className="mt-6 animate-in fade-in-50 duration-300">
+            <ResetPasswordTab />
+          </TabsContent>
+
+          <TabsContent value="coin-history" className="mt-6 animate-in fade-in-50 duration-300">
+            <CoinHistoryTab />
+          </TabsContent>
+
+          <TabsContent value="purchase-log" className="mt-6 animate-in fade-in-50 duration-300">
+            <PurchaseLogTab />
+          </TabsContent>
+
+          <TabsContent value="archetype-cards" className="mt-6 animate-in fade-in-50 duration-300">
+            <ArchetypeCardsTab />
+          </TabsContent>
+
+          <TabsContent value="staples-manage" className="mt-6 animate-in fade-in-50 duration-300">
+            <StaplesManageTab />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}
+
+function CreateUserTab() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [coins, setCoins] = useState("0");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setIsLoading(true);
+
+    try {
+      const userORM = UserORM.getInstance();
+
+      // Check if username already exists
+      const existing = await userORM.getUserByUsername(username);
+      if (existing.length > 0) {
+        setError("Username already exists!");
+        return;
+      }
+
+      // Validate inputs
+      if (!username || username.trim().length === 0) {
+        setError('Username cannot be empty');
+        return;
+      }
+      if (!password || password.length < 3) {
+        setError('Password must be at least 3 characters');
+        return;
+      }
+
+      // Hash password
+      const passwordHash = await hashPassword(password);
+
+      // Ensure coin is a valid integer (fallback to 0)
+      const coinVal = Number.isFinite(Number(coins)) ? Number(coins) : parseInt(coins || '0', 10) || 0;
+
+      // Debug payload
+      console.debug('Creating user payload', { username, coin: coinVal, is_admin: false });
+
+      // Create user
+      await userORM.insertUser([
+        {
+          username,
+          password_hash: passwordHash,
+          coin: coinVal,
+          is_admin: false,
+        } as UserModel,
+      ]);
+
+      setSuccess(`User "${username}" created successfully!`);
+      setUsername("");
+      setPassword("");
+      setCoins("0");
+    } catch (err: any) {
+      console.error('Create user error:', err);
+      setError(err?.message || String(err) || "Failed to create user. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <Card className="max-w-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold bg-gradient-to-r from-rose-400 to-rose-300 bg-clip-text text-transparent">Create New Player Account</CardTitle>
+        <CardDescription className="text-base text-slate-400">Create a new player account with a temporary password</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && (
+            <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+              <AlertDescription className="text-red-200">{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 shadow-lg">
+              <AlertDescription className="font-semibold">{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="create-username" className="font-semibold text-slate-300">Username</Label>
+            <Input id="create-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 focus:ring-rose-500/20" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="create-password" className="font-semibold text-slate-300">Temporary Password</Label>
+            <Input id="create-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 focus:ring-rose-500/20" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="create-coins" className="font-semibold text-slate-300">Starting Coins</Label>
+            <Input id="create-coins" type="number" min="0" value={coins} onChange={(e) => setCoins(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 focus:ring-rose-500/20" />
+          </div>
+
+          <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-bold transition-all duration-300 shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40">
+            {isLoading ? "Creating..." : "Create User"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GrantCoinsTab() {
+  const [username, setUsername] = useState("");
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const presetReasons = [
+    { label: "Tournament Winner", value: "Tournament winner", coins: 100 },
+    { label: "Loser Bonus", value: "Tournament loser bonus", coins: 50 },
+  ];
+
+  function applyPreset(preset: { label: string; value: string; coins: number }) {
+    setAmount(preset.coins.toString());
+    setReason(preset.value);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setIsLoading(true);
+
+    try {
+      const userORM = UserORM.getInstance();
+      const users = await userORM.getUserByUsername(username);
+
+      if (users.length === 0) {
+        setError("User not found!");
+        return;
+      }
+
+      const user = users[0];
+      const coinAmount = Number(amount);
+
+      // Validate amount
+      if (!Number.isFinite(coinAmount) || coinAmount <= 0) {
+        setError("Invalid coin amount");
+        return;
+      }
+
+      // Ensure user record has an id to avoid inserting empty strings into numeric FKs
+      if (!user.id || String(user.id).trim() === "") {
+        setError("User record missing id; cannot grant coins.");
+        console.error('GrantCoins aborted: user has missing id', { username, user });
+        return;
+      }
+
+      const currentCoins = Number(user.coin) || 0;
+      const newCoinValue = currentCoins + coinAmount;
+
+      // Update user coins (ensure coin is numeric)
+      const updatedUser = { ...user, coin: newCoinValue };
+      // Use username index for update to avoid id type mismatch in DB
+      await userORM.setUserByUsername(user.username, updatedUser);
+
+      // Log the grant
+      const coinLogORM = CoinLogORM.getInstance();
+      await coinLogORM.insertCoinLog([
+        {
+          user_id: user.id,
+          amount: coinAmount,
+          reason,
+          // store as unix seconds string to match schema
+          created_at: String(Math.floor(Date.now() / 1000)),
+        } as unknown as CoinLogModel,
+      ]);
+
+      setSuccess(`Successfully granted ${coinAmount} coins to ${username}!`);
+      setUsername("");
+      setAmount("");
+      setReason("");
+    } catch (err: any) {
+      console.error('GrantCoins error', err);
+      // Surface more info in UI to make it easy to copy the Supabase error object
+      const msg = err?.code || err?.message ? `${err.code ?? ""} ${err.message ?? String(err)}` : String(err);
+      setError(msg || "Failed to grant coins. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <Card className="max-w-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">Grant Coins to Player</CardTitle>
+        <CardDescription className="text-base text-slate-400">Add coins to a player's account with a reason</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && (
+            <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+              <AlertDescription className="text-red-200">{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 shadow-lg">
+              <AlertDescription className="font-semibold">{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-2">
+            <Label className="font-semibold text-slate-300">Quick Presets</Label>
+            <div className="flex flex-wrap gap-2">
+              {presetReasons.map((preset) => (
+                <Button key={preset.label} type="button" variant="outline" size="sm" onClick={() => applyPreset(preset)} className="border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/50 transition-all duration-200 shadow-sm">
+                  {preset.label} (+{preset.coins})
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="grant-username" className="font-semibold text-slate-300">Username</Label>
+            <Input id="grant-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="grant-amount" className="font-semibold text-slate-300">Amount</Label>
+            <Input id="grant-amount" type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="grant-reason" className="font-semibold text-slate-300">Reason</Label>
+            <Input id="grant-reason" type="text" value={reason} onChange={(e) => setReason(e.target.value)} required disabled={isLoading} placeholder="e.g., Tournament winner" className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20" />
+          </div>
+
+          <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold transition-all duration-300 shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40">
+            {isLoading ? "Granting..." : "Grant Coins"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ResetPasswordTab() {
+  const [username, setUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setIsLoading(true);
+
+    try {
+      const userORM = UserORM.getInstance();
+      const users = await userORM.getUserByUsername(username);
+
+      if (users.length === 0) {
+        setError("User not found!");
+        return;
+      }
+
+      const user = users[0];
+      const passwordHash = await hashPassword(newPassword);
+
+      // Update password
+      const updatedUser = { ...user, password_hash: passwordHash };
+      await userORM.setUserById(user.id, updatedUser);
+
+      setSuccess(`Password reset successfully for ${username}!`);
+      setUsername("");
+      setNewPassword("");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to reset password. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <Card className="max-w-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold bg-gradient-to-r from-rose-400 to-rose-300 bg-clip-text text-transparent">Reset Player Password</CardTitle>
+        <CardDescription className="text-base text-slate-400">Change a player's password</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && (
+            <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+              <AlertDescription className="text-red-200">{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 shadow-lg">
+              <AlertDescription className="font-semibold">{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="reset-username" className="font-semibold text-slate-300">Username</Label>
+            <Input id="reset-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 focus:ring-rose-500/20" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="reset-password" className="font-semibold text-slate-300">New Password</Label>
+            <Input id="reset-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 focus:ring-rose-500/20" />
+          </div>
+
+          <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-bold transition-all duration-300 shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40">
+            {isLoading ? "Resetting..." : "Reset Password"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CoinHistoryTab() {
+  const [username, setUsername] = useState("");
+  const [logs, setLogs] = useState<CoinLogModel[]>([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const userORM = UserORM.getInstance();
+      const users = await userORM.getUserByUsername(username);
+
+      if (users.length === 0) {
+        setError("User not found!");
+        setLogs([]);
+        return;
+      }
+
+      const user = users[0];
+      const coinLogORM = CoinLogORM.getInstance();
+      const data = await coinLogORM.getCoinLogByUserId(user.id);
+      // Sort by unix timestamp (numeric comparison)
+      setLogs(data.sort((a, b) => Number(b.created_at) - Number(a.created_at)));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load coin history. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="max-w-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">View Player Coin History</CardTitle>
+          <CardDescription className="text-base text-slate-400">Search for a player to view their complete coin transaction log</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSearch} className="space-y-4">
+            {error && (
+              <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+                <AlertDescription className="text-red-200">{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex gap-2">
+              <Input type="text" placeholder="Enter username..." value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="flex-1 transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20 shadow-sm" />
+              <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40">
+                {isLoading ? "Searching..." : "Search"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {logs.length > 0 && (
+        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg animate-in fade-in-50 duration-300">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">Coin Transaction History for {username}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-slate-700">
+                  <TableHead className="font-bold text-slate-300">Date</TableHead>
+                  <TableHead className="font-bold text-slate-300">Amount</TableHead>
+                  <TableHead className="font-bold text-slate-300">Reason</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map((log) => {
+                  // Format unix timestamp to date string
+                  const formatLogDate = (timestamp: string | number): string => {
+                    const ts = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
+                    if (isNaN(ts)) return "Unknown";
+                    const ms = ts < 10000000000 ? ts * 1000 : ts;
+                    return new Date(ms).toLocaleString();
+                  };
+                  return (
+                  <TableRow key={log.id} className="border-slate-700/50 hover:bg-slate-700/30 transition-colors duration-200">
+                    <TableCell className="text-slate-400">{formatLogDate(log.created_at)}</TableCell>
+                    <TableCell>
+                      <span className={log.amount >= 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
+                        {log.amount >= 0 ? "+" : ""}
+                        {log.amount} coins
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-slate-200 font-medium">{log.reason}</TableCell>
+                  </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function PurchaseLogTab() {
+  const [searchMode, setSearchMode] = useState<"user" | "all">("all");
+  const [username, setUsername] = useState("");
+  const [purchases, setPurchases] = useState<(PurchaseModel & { username?: string })[]>([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load all purchases on mount
+  useEffect(() => {
+    if (searchMode === "all") {
+      loadAllPurchases();
+    }
+  }, [searchMode]);
+
+  async function loadAllPurchases() {
+    setIsLoading(true);
+    setError("");
+    try {
+      const purchaseORM = PurchaseORM.getInstance();
+      const userORM = UserORM.getInstance();
+      
+      // Get all purchases
+      const [allPurchases] = await purchaseORM.listPurchase(undefined, undefined, { number: 0, size: 500 });
+      
+      // Get all users to map user_id to username
+      const allUsers = await userORM.getAllUser();
+      const userMap = new Map(allUsers.map(u => [u.id, u.username]));
+      
+      // Add username to each purchase
+      const purchasesWithUsername = allPurchases.map(p => ({
+        ...p,
+        username: userMap.get(p.user_id) || "Unknown"
+      }));
+      
+      setPurchases(purchasesWithUsername.sort((a, b) => 
+        Number(b.bought_at) - Number(a.bought_at)
+      ));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load purchases. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const userORM = UserORM.getInstance();
+      const users = await userORM.getUserByUsername(username);
+
+      if (users.length === 0) {
+        setError("User not found!");
+        setPurchases([]);
+        return;
+      }
+
+      const user = users[0];
+      const purchaseORM = PurchaseORM.getInstance();
+      const data = await purchaseORM.getPurchaseByUserId(user.id);
+      setPurchases(data.map(p => ({ ...p, username: user.username })).sort((a, b) => 
+        Number(b.bought_at) - Number(a.bought_at)
+      ));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load purchase history. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function formatDate(timestamp: string | number): string {
+    const ts = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
+    if (isNaN(ts)) return "Unknown";
+    // If timestamp is in seconds (10 digits), convert to milliseconds
+    const ms = ts < 10000000000 ? ts * 1000 : ts;
+    return new Date(ms).toLocaleString();
+  }
+
+  function formatItemType(purchase: PurchaseModel & { username?: string }): string {
+    // Check against known archetype/staple lists for accurate display
+    // Use lowercase comparison to handle any casing differences
+    const archetypeNames = new Set(ARCHETYPE_DECKS.map(d => d.name.toLowerCase().trim()));
+    const stapleNames = new Set(STAPLE_CARDS.map(s => s.name.toLowerCase().trim()));
+    
+    const itemNameLower = (purchase.item_name || "").toLowerCase().trim();
+    
+    if (archetypeNames.has(itemNameLower)) return "Deck";
+    if (stapleNames.has(itemNameLower)) return "Staple";
+    
+    // Fallback to stored value (cast to any to handle string vs enum mismatch)
+    const itemType = purchase.item_type as any;
+    if (typeof itemType === 'string') return itemType;
+    if (itemType === PurchaseItemType.Deck || itemType === 1) return "Deck";
+    if (itemType === PurchaseItemType.Staple || itemType === 2) return "Staple";
+    return "Unknown";
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="max-w-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-300 bg-clip-text text-transparent">Purchase Log</CardTitle>
+          <CardDescription className="text-base text-slate-400">View all player purchases or search by username</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Button 
+              variant={searchMode === "all" ? "default" : "outline"} 
+              onClick={() => setSearchMode("all")}
+              className={searchMode === "all" ? "bg-gradient-to-r from-purple-500 to-pink-500" : ""}
+            >
+              All Purchases
+            </Button>
+            <Button 
+              variant={searchMode === "user" ? "default" : "outline"} 
+              onClick={() => setSearchMode("user")}
+              className={searchMode === "user" ? "bg-gradient-to-r from-purple-500 to-pink-500" : ""}
+            >
+              Search by User
+            </Button>
+          </div>
+
+          {searchMode === "user" && (
+            <form onSubmit={handleSearch} className="space-y-4">
+              {error && (
+                <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+                  <AlertDescription className="text-red-200">{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2">
+                <Input type="text" placeholder="Enter username..." value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="flex-1 transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 shadow-sm" />
+                <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40">
+                  {isLoading ? "Searching..." : "Search"}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {searchMode === "all" && error && (
+            <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+              <AlertDescription className="text-red-200">{error}</AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {isLoading && searchMode === "all" && (
+        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+          <CardContent className="py-8 text-center text-slate-400">
+            Loading purchases...
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && purchases.length > 0 && (
+        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg animate-in fade-in-50 duration-300">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-300 bg-clip-text text-transparent">
+              {searchMode === "user" ? `Purchases by ${username}` : "All Purchases"} ({purchases.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-slate-700">
+                  <TableHead className="font-bold text-slate-300">Date</TableHead>
+                  <TableHead className="font-bold text-slate-300">User</TableHead>
+                  <TableHead className="font-bold text-slate-300">Item</TableHead>
+                  <TableHead className="font-bold text-slate-300">Type</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {purchases.map((purchase) => (
+                  <TableRow key={purchase.id} className="border-slate-700/50 hover:bg-slate-700/30 transition-colors duration-200">
+                    <TableCell className="text-slate-400">{formatDate(purchase.bought_at)}</TableCell>
+                    <TableCell className="text-amber-400 font-medium">{purchase.username}</TableCell>
+                    <TableCell className="text-slate-200 font-medium">{purchase.item_name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={
+                        formatItemType(purchase) === "Deck" 
+                          ? "border-blue-500/50 text-blue-400" 
+                          : "border-green-500/50 text-green-400"
+                      }>
+                        {formatItemType(purchase)}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && purchases.length === 0 && searchMode === "all" && (
+        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+          <CardContent className="py-8 text-center text-slate-400">
+            No purchases found.
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// Local state for card modifications - persisted to Supabase via CardModificationsORM
+// Note: customCards now stores full card objects so players can immediately see admin-added cards
+const cardModifications: Record<string, { rating?: MetaRating; price?: number; displayName?: string; imageUrl?: string; customCards?: Array<{ name: string; data?: any }> }> = {};
+
+// Module-level storage for custom staples (persisted to same DB table)
+const customStaples: Array<{ name: string; rating: MetaRating; price: number; imageUrl?: string }> = [];
+const removedStaples: Set<string> = new Set();
+
+// Module-level modification version counter and listeners for cross-component updates
+let modificationVersion = 0;
+const modificationListeners: Set<() => void> = new Set();
+
+// Debounce timer for persisting modifications
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Persist all modifications to the database (debounced)
+async function persistModificationsToDb() {
+  try {
+    const orm = CardModificationsORM.getInstance();
+    const payload = {
+      archetypes: cardModifications,
+      customStaples: customStaples,
+      removedStaples: Array.from(removedStaples),
+    };
+    await orm.upsertMods(payload);
+    console.debug('Persisted modifications to DB', { archetypes: Object.keys(cardModifications).length, customStaples: customStaples.length, removedStaples: removedStaples.size });
+    
+    // Notify other tabs via BroadcastChannel
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('ryunix-card-mods');
+        bc.postMessage({ type: 'updated' });
+        bc.close();
+      }
+    } catch (e) {
+      console.warn('Failed to broadcast modification update', e);
+    }
+  } catch (e) {
+    console.error('Failed to persist modifications to DB', e);
+  }
+}
+
+function notifyModificationChange() {
+  modificationVersion++;
+  modificationListeners.forEach(listener => listener());
+  
+  // Debounced persistence - save to DB after 500ms of no changes
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistModificationsToDb();
+  }, 500);
+}
+
+function useModificationVersion() {
+  const [version, setVersion] = useState(modificationVersion);
+  useEffect(() => {
+    const listener = () => setVersion(modificationVersion);
+    modificationListeners.add(listener);
+    return () => { modificationListeners.delete(listener); };
+  }, []);
+  return version;
+}
+
+// Helper to get effective staples list (original + custom - removed)
+function getEffectiveStaples(): Array<{ name: string; rating: MetaRating; price: number; imageUrl?: string }> {
+  const originalFiltered = STAPLE_CARDS.filter(s => !removedStaples.has(s.name));
+  return [...originalFiltered, ...customStaples];
+}
+
+type ViewMode = "list" | "compact" | "grid";
+
+// Card search result type
+interface YGOCard {
+  id: number;
+  name: string;
+  type: string;
+  desc: string;
+  atk?: number;
+  def?: number;
+  level?: number;
+  race: string;
+  attribute?: string;
+  archetype?: string;
+  card_images: Array<{ id: number; image_url: string; image_url_small: string; image_url_cropped: string }>;
+}
+
+// Cache for archetype cards loaded from DB/API
+const archetypeCardsCache: Record<string, YGOCard[]> = {};
+
+function ArchetypeCardsTab() {
+  const [selectedArchetype, setSelectedArchetype] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [archetypeCards, setArchetypeCards] = useState<YGOCard[]>([]);
+  const [loadingCards, setLoadingCards] = useState(false);
+  const [cardSearchQuery, setCardSearchQuery] = useState("");
+  const [cardSearchResults, setCardSearchResults] = useState<YGOCard[]>([]);
+  const [cardSearchLoading, setCardSearchLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  
+  // Editing archetype name/image state
+  const [editingName, setEditingName] = useState(false);
+  const [tempName, setTempName] = useState("");
+  const [imageSearchOpen, setImageSearchOpen] = useState(false);
+  const [imageSearchQuery, setImageSearchQuery] = useState("");
+  const [imageSearchResults, setImageSearchResults] = useState<YGOCard[]>([]);
+  const [imageSearchLoading, setImageSearchLoading] = useState(false);
+
+  // Rating style helper
+  function getRatingBadgeStyle(rating: string): string {
+    switch (rating) {
+      case "S+": return "bg-gradient-to-r from-rose-500 to-pink-500 text-white border-rose-400";
+      case "S": return "bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 border-amber-400";
+      case "A": return "bg-gradient-to-r from-violet-500 to-purple-600 text-white border-violet-400";
+      case "B": return "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400";
+      case "C": return "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400";
+      case "D": return "bg-slate-600 text-slate-200 border-slate-500";
+      default: return "bg-slate-700 text-slate-400 border-slate-600";
+    }
+  }
+
+  // Get display name for archetype (from modifications or original)
+  function getDisplayName(originalName: string): string {
+    return cardModifications[originalName]?.displayName || originalName;
+  }
+
+  // Get archetype image URL (from modifications or original catalog)
+  function getArchetypeImageUrl(archetypeName: string): string | undefined {
+    const mod = cardModifications[archetypeName];
+    if (mod?.imageUrl) return mod.imageUrl;
+    const arch = ARCHETYPE_DECKS.find(a => a.name === archetypeName);
+    return arch?.imageUrl;
+  }
+
+  // Save archetype display name
+  function saveArchetypeName() {
+    if (!selectedArchetype || !tempName.trim()) return;
+    if (!cardModifications[selectedArchetype]) {
+      cardModifications[selectedArchetype] = {};
+    }
+    cardModifications[selectedArchetype].displayName = tempName.trim();
+    notifyModificationChange(); // Notify other components
+    setEditingName(false);
+    setSuccessMessage(`Display name changed to "${tempName.trim()}"`);
+    setTimeout(() => setSuccessMessage(""), 2000);
+  }
+
+  // Search for card images to use as archetype image
+  async function searchArchetypeImages() {
+    if (!imageSearchQuery.trim()) return;
+    setImageSearchLoading(true);
+    setImageSearchResults([]);
+    try {
+      const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(imageSearchQuery)}&num=20&offset=0`);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data.data)) {
+          setImageSearchResults(data.data);
+        }
+      }
+    } catch (err) {
+      console.error('Image search failed', err);
+    } finally {
+      setImageSearchLoading(false);
+    }
+  }
+
+  // Select a card image for the archetype
+  function selectArchetypeImage(imageUrl: string) {
+    if (!selectedArchetype) return;
+    if (!cardModifications[selectedArchetype]) {
+      cardModifications[selectedArchetype] = {};
+    }
+    cardModifications[selectedArchetype].imageUrl = imageUrl;
+    notifyModificationChange(); // Notify other components
+    setImageSearchOpen(false);
+    setImageSearchQuery("");
+    setImageSearchResults([]);
+    setSuccessMessage("Archetype image updated!");
+    setTimeout(() => setSuccessMessage(""), 2000);
+  }
+  
+  // Filter archetypes by search
+  const filteredArchetypes = useMemo(() => {
+    return ARCHETYPE_DECKS.filter(a => 
+      a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (cardModifications[a.name]?.displayName?.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [searchQuery]);
+
+  // Load archetype cards from DB first, then API as fallback
+  async function loadArchetypeCards(archetypeName: string) {
+    setLoadingCards(true);
+    setArchetypeCards([]);
+    setErrorMessage("");
+    
+    try {
+      // Check cache first
+      if (archetypeCardsCache[archetypeName]?.length > 0) {
+        setArchetypeCards(archetypeCardsCache[archetypeName]);
+        setLoadingCards(false);
+        return;
+      }
+
+      // Try loading from local DB first
+      try {
+        const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+        const dbCards = await dbOrm.getByArchetype(archetypeName, 500);
+        if (dbCards && dbCards.length > 0) {
+          const normalized = dbCards.map((r: any) => {
+            const data = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+            return data as YGOCard;
+          });
+          archetypeCardsCache[archetypeName] = normalized;
+          setArchetypeCards(normalized);
+          setLoadingCards(false);
+          return;
+        }
+      } catch (e) {
+        console.warn('Failed to load from DB, falling back to API', e);
+      }
+
+      // Fallback to API
+      const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(archetypeName)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data.data)) {
+          archetypeCardsCache[archetypeName] = data.data;
+          setArchetypeCards(data.data);
+          
+          // Persist to DB for faster future loads
+          try {
+            const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+            const payload = data.data.map((c: YGOCard) => ({
+              name: c.name,
+              data: c,
+              archetypes: c.archetype ? [c.archetype] : [archetypeName]
+            }));
+            await dbOrm.bulkUpsert(payload);
+          } catch (e) {
+            console.warn('Failed to persist archetype cards to DB', e);
+          }
+        }
+      } else {
+        setErrorMessage(`API returned ${response.status}: Could not load cards for "${archetypeName}"`);
+      }
+    } catch (err: any) {
+      console.error('Failed to load archetype cards', err);
+      setErrorMessage(err?.message || 'Failed to load archetype cards');
+    } finally {
+      setLoadingCards(false);
+    }
+  }
+
+  // Search for cards to add
+  async function searchCards(query: string) {
+    if (!query.trim()) {
+      setCardSearchResults([]);
+      return;
+    }
+    
+    setCardSearchLoading(true);
+    try {
+      const urls = [
+        `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(query)}&num=30&offset=0`,
+        `https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(query)}`,
+      ];
+      
+      for (const url of urls) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data.data) && data.data.length > 0) {
+              setCardSearchResults(data.data.slice(0, 30));
+              return;
+            }
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      setCardSearchResults([]);
+    } catch (err) {
+      console.error('Card search failed', err);
+      setCardSearchResults([]);
+    } finally {
+      setCardSearchLoading(false);
+    }
+  }
+
+  // Add a card to the selected archetype
+  async function addCardToArchetype(card: YGOCard) {
+    if (!selectedArchetype) return;
+    
+    // Check if already in the list
+    if (archetypeCards.some(c => c.name === card.name)) {
+      setSuccessMessage(`"${card.name}" is already in ${selectedArchetype}`);
+      setTimeout(() => setSuccessMessage(""), 2000);
+      return;
+    }
+    
+    setSavingState('saving');
+    
+    try {
+      // Add to local state
+      const updatedCards = [...archetypeCards, card];
+      setArchetypeCards(updatedCards);
+      archetypeCardsCache[selectedArchetype] = updatedCards;
+      
+      // Persist to DB
+      const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+      await dbOrm.ensureArchetypeOnCard(card.name, selectedArchetype, card);
+      
+      notifyModificationChange(); // Notify player panels to refresh
+      setSavingState('saved');
+      setSuccessMessage(`Added "${card.name}" to ${selectedArchetype}`);
+      setTimeout(() => {
+        setSuccessMessage("");
+        setSavingState('idle');
+      }, 2000);
+    } catch (err: any) {
+      console.error('Failed to add card to archetype', err);
+      setErrorMessage(err?.message || 'Failed to add card');
+      setSavingState('idle');
+    }
+  }
+
+  // Remove a card from the selected archetype
+  async function removeCardFromArchetype(cardName: string) {
+    if (!selectedArchetype) return;
+    
+    setSavingState('saving');
+    
+    try {
+      // Remove from local state
+      const updatedCards = archetypeCards.filter(c => c.name !== cardName);
+      setArchetypeCards(updatedCards);
+      archetypeCardsCache[selectedArchetype] = updatedCards;
+      
+      // Remove archetype from card in DB
+      const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+      const existing = await dbOrm.getByName(cardName);
+      if (existing && existing.archetypes) {
+        const newArchetypes = existing.archetypes.filter((a: string) => a !== selectedArchetype);
+        await dbOrm.bulkUpsert([{
+          name: cardName,
+          data: existing.data,
+          archetypes: newArchetypes
+        }]);
+      }
+      
+      notifyModificationChange(); // Notify player panels to refresh
+      setSavingState('saved');
+      setSuccessMessage(`Removed "${cardName}" from ${selectedArchetype}`);
+      setTimeout(() => {
+        setSuccessMessage("");
+        setSavingState('idle');
+      }, 2000);
+    } catch (err: any) {
+      console.error('Failed to remove card from archetype', err);
+      setErrorMessage(err?.message || 'Failed to remove card');
+      setSavingState('idle');
+    }
+  }
+
+  // Refresh cards from API (force reload)
+  async function refreshFromAPI() {
+    if (!selectedArchetype) return;
+    
+    setLoadingCards(true);
+    setErrorMessage("");
+    
+    try {
+      const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(selectedArchetype)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data.data)) {
+          archetypeCardsCache[selectedArchetype] = data.data;
+          setArchetypeCards(data.data);
+          
+          // Persist to DB
+          const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+          const payload = data.data.map((c: YGOCard) => ({
+            name: c.name,
+            data: c,
+            archetypes: c.archetype ? [c.archetype] : [selectedArchetype]
+          }));
+          await dbOrm.bulkUpsert(payload);
+          
+          notifyModificationChange(); // Notify player panels to refresh
+          setSuccessMessage(`Refreshed ${data.data.length} cards from API`);
+          setTimeout(() => setSuccessMessage(""), 3000);
+        }
+      } else {
+        setErrorMessage(`API returned ${response.status}`);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Failed to refresh from API');
+    } finally {
+      setLoadingCards(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-xl font-bold bg-gradient-to-r from-rose-400 to-amber-400 bg-clip-text text-transparent">
+            <Layers className="size-6 text-rose-400" />
+            Archetype Cards Manager
+          </CardTitle>
+          <CardDescription className="text-slate-400">
+            View and manage cards for each archetype. Add or remove cards to customize archetype contents.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Archetype List */}
+            <div className="lg:col-span-1 space-y-3">
+              <div className="flex items-center gap-2">
+                <Search className="size-4 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Search archetypes..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                />
+              </div>
+              
+              <div className="max-h-[500px] overflow-y-auto pr-2 space-y-1">
+                {filteredArchetypes.map((archetype) => (
+                  <button
+                    key={archetype.name}
+                    type="button"
+                    onClick={() => {
+                      setSelectedArchetype(archetype.name);
+                      loadArchetypeCards(archetype.name);
+                    }}
+                    className={`w-full flex items-center gap-2 p-2 rounded-lg border transition-all text-left ${
+                      selectedArchetype === archetype.name
+                        ? "border-rose-500/50 bg-rose-950/30 text-rose-300"
+                        : "border-slate-700/50 bg-slate-800/30 text-slate-300 hover:bg-slate-700/30"
+                    }`}
+                  >
+                    {getArchetypeImageUrl(archetype.name) ? (
+                      <img
+                        src={getArchetypeImageUrl(archetype.name)}
+                        alt={getDisplayName(archetype.name)}
+                        className="size-8 rounded object-cover"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="size-8 rounded bg-slate-700 flex items-center justify-center">
+                        <Package className="size-4 text-slate-500" />
+                      </div>
+                    )}
+                    <span className="flex-1 truncate font-medium text-sm">{getDisplayName(archetype.name)}</span>
+                    <Badge className={`text-xs shrink-0 ${getRatingBadgeStyle(archetype.rating)}`}>
+                      {archetype.rating}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+              
+              <div className="text-xs text-slate-500 text-center">
+                {filteredArchetypes.length} of {ARCHETYPE_DECKS.length} archetypes
+              </div>
+            </div>
+
+            {/* Card List & Management */}
+            <div className="lg:col-span-2 space-y-4">
+              {!selectedArchetype ? (
+                <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                  <Layers className="size-12 mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Select an archetype</p>
+                  <p className="text-sm">Choose an archetype from the list to view and manage its cards</p>
+                </div>
+              ) : (
+                <>
+                  {/* Header with archetype name and actions */}
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3">
+                      {/* Archetype Image with Edit */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImageSearchOpen(true);
+                          setImageSearchQuery(selectedArchetype);
+                        }}
+                        className="relative group"
+                        title="Change archetype image"
+                      >
+                        {getArchetypeImageUrl(selectedArchetype) ? (
+                          <img
+                            src={getArchetypeImageUrl(selectedArchetype)}
+                            alt={getDisplayName(selectedArchetype)}
+                            className="size-12 rounded-lg object-cover border-2 border-amber-500/50 group-hover:border-amber-400 transition-colors"
+                          />
+                        ) : (
+                          <div className="size-12 rounded-lg bg-slate-700 flex items-center justify-center border-2 border-dashed border-slate-600 group-hover:border-amber-400 transition-colors">
+                            <Image className="size-5 text-slate-500 group-hover:text-amber-400" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                          <Edit3 className="size-4 text-white" />
+                        </div>
+                      </button>
+                      
+                      {/* Archetype Name with Edit */}
+                      {editingName ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="text"
+                            value={tempName}
+                            onChange={(e) => setTempName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveArchetypeName(); if (e.key === 'Escape') setEditingName(false); }}
+                            className="w-48 bg-slate-800/50 border-amber-500 text-amber-400 font-bold"
+                            autoFocus
+                          />
+                          <Button size="sm" onClick={saveArchetypeName} className="bg-emerald-600 hover:bg-emerald-700">
+                            <Save className="size-3" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingName(false)} className="text-slate-400">
+                            <X className="size-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <h3 
+                          className="text-lg font-bold text-amber-400 flex items-center gap-2 cursor-pointer hover:text-amber-300 group"
+                          onClick={() => { setEditingName(true); setTempName(getDisplayName(selectedArchetype)); }}
+                          title="Click to rename"
+                        >
+                          {getDisplayName(selectedArchetype)}
+                          <Edit3 className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </h3>
+                      )}
+                      
+                      <Badge variant="outline" className="text-xs border-slate-600">
+                        {archetypeCards.length} cards
+                      </Badge>
+                      
+                      {/* Rating Selector */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">Rating:</span>
+                        <Select 
+                          value={(() => {
+                            const archetype = ARCHETYPE_DECKS.find(a => a.name === selectedArchetype);
+                            const mod = cardModifications[selectedArchetype];
+                            return mod?.rating || archetype?.rating || 'C';
+                          })()} 
+                          onValueChange={(newRating: MetaRating) => {
+                            const archetype = ARCHETYPE_DECKS.find(a => a.name === selectedArchetype);
+                            if (!archetype) return;
+                            
+                            const newPrice = META_RATING_PRICES[newRating];
+                            const mod = cardModifications[selectedArchetype] || {};
+                            cardModifications[selectedArchetype] = {
+                              ...mod,
+                              rating: newRating,
+                              price: newPrice
+                            };
+                            
+                            notifyModificationChange();
+                          }}
+                        >
+                          <SelectTrigger className="w-16 h-7 bg-slate-800 border-slate-600 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(['F', 'D', 'C', 'B', 'A', 'S', 'S+'] as MetaRating[]).map((r) => (
+                              <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {savingState === 'saving' && (
+                        <span className="text-xs text-amber-400 animate-pulse">Saving...</span>
+                      )}
+                      {savingState === 'saved' && (
+                        <span className="text-xs text-emerald-400">Saved</span>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={refreshFromAPI}
+                      disabled={loadingCards}
+                      className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                    >
+                      <Search className="size-3 mr-1" />
+                      Refresh from API
+                    </Button>
+                  </div>
+                  
+                  {/* Image Search Modal */}
+                  {imageSearchOpen && (
+                    <div className="p-4 rounded-lg border border-amber-500/30 bg-slate-800/80">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-amber-400 flex items-center gap-2">
+                          <Image className="size-4" />
+                          Search Card Image for Archetype
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => { setImageSearchOpen(false); setImageSearchResults([]); }}
+                          className="text-slate-400 hover:text-slate-200"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                      <div className="flex gap-2 mb-3">
+                        <Input
+                          type="text"
+                          placeholder="Search for a card image..."
+                          value={imageSearchQuery}
+                          onChange={(e) => setImageSearchQuery(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') searchArchetypeImages(); }}
+                          className="flex-1 bg-slate-800/50 border-slate-700 text-slate-100"
+                          autoFocus
+                        />
+                        <Button onClick={searchArchetypeImages} disabled={imageSearchLoading} className="bg-amber-500 hover:bg-amber-600 text-slate-900">
+                          <Search className="size-4" />
+                        </Button>
+                      </div>
+                      {imageSearchLoading && <div className="text-center py-4 text-amber-400 animate-pulse">Searching...</div>}
+                      {!imageSearchLoading && imageSearchResults.length > 0 && (
+                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-48 overflow-y-auto">
+                          {imageSearchResults.map((card) => (
+                            <button
+                              key={card.id}
+                              type="button"
+                              onClick={() => selectArchetypeImage(card.card_images?.[0]?.image_url_small || card.card_images?.[0]?.image_url || '')}
+                              className="relative group rounded overflow-hidden border border-slate-700 hover:border-amber-400 transition-colors"
+                              title={card.name}
+                            >
+                              <img
+                                src={card.card_images?.[0]?.image_url_small}
+                                alt={card.name}
+                                className="w-full aspect-[3/4] object-cover"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Success/Error messages */}
+                  {successMessage && (
+                    <Alert className="bg-emerald-950/50 border border-emerald-500/50 text-emerald-200">
+                      <Save className="size-4" />
+                      <AlertDescription>{successMessage}</AlertDescription>
+                    </Alert>
+                  )}
+                  {errorMessage && (
+                    <Alert className="bg-rose-950/50 border border-rose-500/50 text-rose-200">
+                      <X className="size-4" />
+                      <AlertDescription>{errorMessage}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Add Card Section */}
+                  <div className="p-3 rounded-lg border border-slate-700/50 bg-slate-800/30">
+                    <div className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
+                      <Plus className="size-4" />
+                      Add Card to Archetype
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Search for a card to add..."
+                        value={cardSearchQuery}
+                        onChange={(e) => setCardSearchQuery(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') searchCards(cardSearchQuery); }}
+                        className="flex-1 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                      />
+                      <Button
+                        onClick={() => searchCards(cardSearchQuery)}
+                        disabled={cardSearchLoading}
+                        className="bg-amber-500 hover:bg-amber-600 text-slate-900"
+                      >
+                        <Search className="size-4" />
+                      </Button>
+                    </div>
+                    
+                    {/* Search Results */}
+                    {cardSearchLoading && (
+                      <div className="text-center py-4 text-amber-400 animate-pulse">Searching...</div>
+                    )}
+                    {!cardSearchLoading && cardSearchResults.length > 0 && (
+                      <div className="mt-3 max-h-48 overflow-y-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {cardSearchResults.map((card) => {
+                            const isInArchetype = archetypeCards.some(c => c.name === card.name);
+                            return (
+                              <div
+                                key={card.id}
+                                className={`flex items-center gap-2 p-2 rounded border ${
+                                  isInArchetype
+                                    ? 'border-emerald-500/50 bg-emerald-950/20'
+                                    : 'border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30'
+                                }`}
+                              >
+                                {card.card_images?.[0]?.image_url_small && (
+                                  <img
+                                    src={card.card_images[0].image_url_small}
+                                    alt={card.name}
+                                    className="size-8 rounded object-cover"
+                                  />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium text-slate-100 truncate">{card.name}</div>
+                                  <div className="text-xs text-slate-500 truncate">{card.type}</div>
+                                </div>
+                                {isInArchetype ? (
+                                  <span className="text-xs text-emerald-400">âœ“</span>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => addCardToArchetype(card)}
+                                    className="h-6 px-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                                  >
+                                    <Plus className="size-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Cards in Archetype */}
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold text-slate-300">Cards in this Archetype</div>
+                    
+                    {loadingCards ? (
+                      <div className="text-center py-8 text-amber-400 animate-pulse">Loading cards...</div>
+                    ) : archetypeCards.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400">
+                        No cards found. Use "Refresh from API" or add cards manually above.
+                      </div>
+                    ) : (
+                      <div className="max-h-[400px] overflow-y-auto pr-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {archetypeCards.map((card) => (
+                            <div
+                              key={card.id || card.name}
+                              className="flex items-center gap-2 p-2 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30 group"
+                            >
+                              {card.card_images?.[0]?.image_url_small && (
+                                <img
+                                  src={card.card_images[0].image_url_small}
+                                  alt={card.name}
+                                  className="size-10 rounded object-cover"
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-slate-100 truncate">{card.name}</div>
+                                <div className="text-xs text-slate-400 truncate">{card.type}</div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeCardFromArchetype(card.name)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-500/20 text-slate-400 hover:text-red-400"
+                                title="Remove from archetype"
+                              >
+                                <X className="size-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function StaplesManageTab() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [cardSearchQuery, setCardSearchQuery] = useState("");
+  const [cardSearchResults, setCardSearchResults] = useState<YGOCard[]>([]);
+  const [cardSearchLoading, setCardSearchLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [selectedRating, setSelectedRating] = useState<MetaRating>("A");
+  
+  // Listen for modification changes (shared with catalog)
+  const modVersion = useModificationVersion();
+  
+  // Editing staple state
+  const [editingStaple, setEditingStaple] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRating, setEditRating] = useState<MetaRating>("A");
+  const [editImageUrl, setEditImageUrl] = useState("");
+
+  // Get effective staples list using shared function
+  const effectiveStaples = useMemo(() => {
+    return getEffectiveStaples();
+  }, [modVersion]);
+
+  // Filter staples by search
+  const filteredStaples = useMemo(() => {
+    return effectiveStaples.filter(s => 
+      s.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery, effectiveStaples]);
+
+  // Rating style helper
+  function getRatingBadgeStyle(rating: string): string {
+    switch (rating) {
+      case "S+": return "bg-gradient-to-r from-rose-500 to-pink-500 text-white border-rose-400";
+      case "S": return "bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 border-amber-400";
+      case "A": return "bg-gradient-to-r from-violet-500 to-purple-600 text-white border-violet-400";
+      case "B": return "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400";
+      case "C": return "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400";
+      case "D": return "bg-slate-600 text-slate-200 border-slate-500";
+      default: return "bg-slate-700 text-slate-400 border-slate-600";
+    }
+  }
+
+  // Search for cards to add as staples
+  async function searchCards() {
+    if (!cardSearchQuery.trim()) return;
+    setCardSearchLoading(true);
+    setCardSearchResults([]);
+    try {
+      const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(cardSearchQuery)}&num=20&offset=0`);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data.data)) {
+          setCardSearchResults(data.data);
+        }
+      }
+    } catch (err) {
+      console.error('Card search failed', err);
+    } finally {
+      setCardSearchLoading(false);
+    }
+  }
+
+  // Add card as staple
+  function addStaple(card: YGOCard) {
+    // Check if already exists
+    const exists = effectiveStaples.some(s => s.name.toLowerCase() === card.name.toLowerCase());
+    if (exists) {
+      setErrorMessage(`"${card.name}" is already a staple`);
+      setTimeout(() => setErrorMessage(""), 2000);
+      return;
+    }
+    
+    const price = META_RATING_PRICES[selectedRating] || 800;
+    customStaples.push({
+      name: card.name,
+      rating: selectedRating,
+      price,
+      imageUrl: card.card_images?.[0]?.image_url_small
+    });
+    
+    // If it was previously removed, unremove it
+    removedStaples.delete(card.name);
+    
+    notifyModificationChange(); // Notify other components
+    setSuccessMessage(`Added "${card.name}" as staple`);
+    setCardSearchResults([]);
+    setCardSearchQuery("");
+    setTimeout(() => setSuccessMessage(""), 2000);
+  }
+
+  // Remove staple
+  function removeStaple(name: string) {
+    // If it's a custom staple, remove from customStaples
+    const customIndex = customStaples.findIndex(s => s.name === name);
+    if (customIndex !== -1) {
+      customStaples.splice(customIndex, 1);
+    } else {
+      // If it's an original staple, add to removed set
+      removedStaples.add(name);
+    }
+    notifyModificationChange(); // Notify other components
+    setSuccessMessage(`Removed "${name}" from staples`);
+    setTimeout(() => setSuccessMessage(""), 2000);
+  }
+
+  // Start editing a staple
+  function startEditStaple(staple: { name: string; rating: MetaRating; imageUrl?: string }) {
+    setEditingStaple(staple.name);
+    setEditName(staple.name);
+    setEditRating(staple.rating);
+    setEditImageUrl(staple.imageUrl || "");
+  }
+
+  // Save staple edits
+  function saveStapleEdit() {
+    if (!editingStaple) return;
+    
+    // Find and update in customStaples or create override
+    const customIndex = customStaples.findIndex(s => s.name === editingStaple);
+    if (customIndex !== -1) {
+      customStaples[customIndex] = {
+        ...customStaples[customIndex],
+        name: editName,
+        rating: editRating,
+        imageUrl: editImageUrl || undefined,
+        price: META_RATING_PRICES[editRating] || customStaples[customIndex].price
+      };
+    } else {
+      // It's an original staple - add as custom with modifications
+      removedStaples.add(editingStaple);
+      const original = STAPLE_CARDS.find(s => s.name === editingStaple);
+      customStaples.push({
+        name: editName,
+        rating: editRating,
+        price: META_RATING_PRICES[editRating] || original?.price || 800,
+        imageUrl: editImageUrl || original?.imageUrl
+      });
+    }
+    
+    notifyModificationChange(); // Notify other components
+    setEditingStaple(null);
+    setSuccessMessage("Staple updated!");
+    setTimeout(() => setSuccessMessage(""), 2000);
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-xl font-bold bg-gradient-to-r from-rose-400 to-amber-400 bg-clip-text text-transparent">
+            <Star className="size-6 text-amber-400" />
+            Staples Manager
+          </CardTitle>
+          <CardDescription className="text-slate-400">
+            Manage staple cards. Add, remove, or edit staples and their ratings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Add Staple Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-amber-400 flex items-center gap-2">
+                <Plus className="size-5" />
+                Add New Staple
+              </h3>
+              
+              {/* Rating selector */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-slate-400">Rating:</span>
+                {(["S+", "S", "A", "B", "C", "D"] as MetaRating[]).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setSelectedRating(r)}
+                    className={`px-3 py-1 rounded text-sm font-bold border transition-all ${
+                      selectedRating === r
+                        ? getRatingBadgeStyle(r) + " ring-2 ring-white/30"
+                        : "bg-slate-700 text-slate-400 border-slate-600 hover:bg-slate-600"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Card search */}
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Search for a card to add..."
+                  value={cardSearchQuery}
+                  onChange={(e) => setCardSearchQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') searchCards(); }}
+                  className="flex-1 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                />
+                <Button
+                  onClick={searchCards}
+                  disabled={cardSearchLoading}
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-900"
+                >
+                  <Search className="size-4" />
+                </Button>
+              </div>
+              
+              {/* Search Results */}
+              {cardSearchLoading && (
+                <div className="text-center py-4 text-amber-400 animate-pulse">Searching...</div>
+              )}
+              {!cardSearchLoading && cardSearchResults.length > 0 && (
+                <div className="max-h-64 overflow-y-auto space-y-1">
+                  {cardSearchResults.map((card) => {
+                    const isStaple = effectiveStaples.some(s => s.name.toLowerCase() === card.name.toLowerCase());
+                    return (
+                      <div
+                        key={card.id}
+                        className="flex items-center gap-2 p-2 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30"
+                      >
+                        {card.card_images?.[0]?.image_url_small && (
+                          <img
+                            src={card.card_images[0].image_url_small}
+                            alt={card.name}
+                            className="size-10 rounded object-cover"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-100 truncate">{card.name}</div>
+                          <div className="text-xs text-slate-400 truncate">{card.type}</div>
+                        </div>
+                        {isStaple ? (
+                          <span className="text-xs text-emerald-400">Already added</span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => addStaple(card)}
+                            className="h-7 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                          >
+                            <Plus className="size-3 mr-1" />
+                            Add
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {/* Success/Error messages */}
+              {successMessage && (
+                <Alert className="bg-emerald-950/50 border border-emerald-500/50 text-emerald-200">
+                  <Save className="size-4" />
+                  <AlertDescription>{successMessage}</AlertDescription>
+                </Alert>
+              )}
+              {errorMessage && (
+                <Alert className="bg-rose-950/50 border border-rose-500/50 text-rose-200">
+                  <X className="size-4" />
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+            
+            {/* Current Staples List */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-amber-400 flex items-center gap-2">
+                  <Star className="size-5" />
+                  Current Staples
+                  <Badge variant="outline" className="text-xs border-slate-600">
+                    {effectiveStaples.length} total
+                  </Badge>
+                </h3>
+              </div>
+              
+              {/* Search filter */}
+              <div className="flex items-center gap-2">
+                <Search className="size-4 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Filter staples..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                />
+              </div>
+              
+              {/* Staples list */}
+              <div className="max-h-[400px] overflow-y-auto pr-2 space-y-1">
+                {filteredStaples.map((staple) => (
+                  <div
+                    key={staple.name}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30 group"
+                  >
+                    {staple.imageUrl ? (
+                      <img
+                        src={staple.imageUrl}
+                        alt={staple.name}
+                        className="size-10 rounded object-cover"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="size-10 rounded bg-slate-700 flex items-center justify-center">
+                        <Star className="size-4 text-slate-500" />
+                      </div>
+                    )}
+                    
+                    {editingStaple === staple.name ? (
+                      <div className="flex-1 flex items-center gap-2 flex-wrap">
+                        <Input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-32 h-7 text-xs bg-slate-800/50 border-amber-500"
+                        />
+                        <select
+                          value={editRating}
+                          onChange={(e) => setEditRating(e.target.value as MetaRating)}
+                          className="h-7 px-2 rounded bg-slate-700 border border-slate-600 text-slate-100 text-xs"
+                        >
+                          {(["S+", "S", "A", "B", "C", "D"] as MetaRating[]).map(r => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                        <Button size="sm" onClick={saveStapleEdit} className="h-7 bg-emerald-600 hover:bg-emerald-700">
+                          <Save className="size-3" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingStaple(null)} className="h-7 text-slate-400">
+                          <X className="size-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-100 truncate">{staple.name}</div>
+                          <div className="text-xs text-slate-400">{staple.price} coins</div>
+                        </div>
+                        <Badge className={`text-xs ${getRatingBadgeStyle(staple.rating)}`}>
+                          {staple.rating}
+                        </Badge>
+                        <button
+                          type="button"
+                          onClick={() => startEditStaple(staple)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-amber-500/20 text-slate-400 hover:text-amber-400"
+                          title="Edit staple"
+                        >
+                          <Edit3 className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeStaple(staple.name)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-500/20 text-slate-400 hover:text-red-400"
+                          title="Remove staple"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              <div className="text-xs text-slate-500 text-center">
+                Showing {filteredStaples.length} of {effectiveStaples.length} staples
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

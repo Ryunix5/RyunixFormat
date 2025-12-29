@@ -1,0 +1,192 @@
+{
+  "id": "102019b61ef48c472d2af20584525bd6651",
+  "version": "102019b629eb0ac764dae2f9583407618e2",
+  "schema": {
+    "name": "purchase",
+    "description": "Tracks user purchases of decks and staples with duplicate prevention",
+    "fields": [
+      {
+        "name": "id",
+        "description": "Unique identifier for each purchase record",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal transaction identification data"
+        }
+      },
+      {
+        "name": "data_creator",
+        "description": "id of the user who creates the record",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        }
+      },
+      {
+        "name": "data_updater",
+        "description": "id of the user who updates the record",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        }
+      },
+      {
+        "name": "create_time",
+        "description": "create time in timestamp unix",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        },
+        "format": "timestamp"
+      },
+      {
+        "name": "update_time",
+        "description": "update time in timestamp unix",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        },
+        "format": "timestamp"
+      },
+      {
+        "name": "user_id",
+        "description": "ID of the user who made the purchase",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 3,
+          "reason": "Links purchase to specific user, sensitive transaction data"
+        },
+        "taxonomy": {
+          "category": "Transaction",
+          "subject": "User purchase activity"
+        }
+      },
+      {
+        "name": "item_name",
+        "description": "Name of the purchased item",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal transaction details"
+        },
+        "taxonomy": {
+          "category": "Product",
+          "subject": "Item identification"
+        }
+      },
+      {
+        "name": "item_type",
+        "description": "Type of the purchased item, either deck or staple",
+        "type": 100,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal product classification data"
+        },
+        "taxonomy": {
+          "category": "Product",
+          "subject": "Item classification"
+        },
+        "enumeration": [
+          {
+            "value": "Unspecified"
+          },
+          {
+            "number": 1,
+            "value": "Deck"
+          },
+          {
+            "number": 2,
+            "value": "Staple"
+          }
+        ]
+      },
+      {
+        "name": "bought_at",
+        "description": "Timestamp unix when the purchase was made in 10-digit string",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal transaction timestamp data"
+        },
+        "taxonomy": {
+          "category": "Transaction",
+          "subject": "Purchase timestamp"
+        },
+        "format": "timestamp"
+      }
+    ],
+    "indexes": [
+      {
+        "fields": [
+          "id"
+        ],
+        "unique": true,
+        "primary": true
+      },
+      {
+        "fields": [
+          "data_creator"
+        ]
+      },
+      {
+        "fields": [
+          "data_updater"
+        ]
+      },
+      {
+        "fields": [
+          "user_id"
+        ]
+      },
+      {
+        "fields": [
+          "item_name",
+          "user_id"
+        ],
+        "unique": true
+      },
+      {
+        "fields": [
+          "item_type"
+        ]
+      },
+      {
+        "fields": [
+          "bought_at"
+        ],
+        "order": true
+      }
+    ],
+    "relations": [
+      {
+        "referencing_fields": [
+          "user_id"
+        ],
+        "referenced_entity": {
+          "name": "user"
+        },
+        "referenced_fields": [
+          "id"
+        ],
+        "cascade": true
+      }
+    ]
+  },
+  "task": {
+    "id": "69508ad312e93c1a0f4bc3a3",
+    "root": "69505d82ff5145db4db85a3f",
+    "project": "69505d82ff5145db4db85a3e",
+    "user": "c8a1a360-3031-70eb-0b84-3c4db877aac5"
+  },
+  "namespace": {
+    "id": "01987547fc6c72ecb453bd2736bd4ea0",
+    "tenant": 2,
+    "name": "global-1",
+    "default": true
+  },
+  "revision": 1
+}

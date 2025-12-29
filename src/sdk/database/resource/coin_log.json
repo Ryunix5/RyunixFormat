@@ -1,0 +1,175 @@
+{
+  "id": "102019b61ef48c474dc88dc7b0c2598d956",
+  "version": "102019b629eb0ac764dae2f9583407618e2",
+  "schema": {
+    "name": "coin_log",
+    "description": "Records all coin transactions including additions and deductions with reasons",
+    "fields": [
+      {
+        "name": "id",
+        "description": "Unique identifier for each coin transaction log",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal transaction log identification"
+        }
+      },
+      {
+        "name": "data_creator",
+        "description": "id of the user who creates the record",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        }
+      },
+      {
+        "name": "data_updater",
+        "description": "id of the user who updates the record",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        }
+      },
+      {
+        "name": "create_time",
+        "description": "create time in timestamp unix",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        },
+        "format": "timestamp"
+      },
+      {
+        "name": "update_time",
+        "description": "update time in timestamp unix",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal system tracking field"
+        },
+        "format": "timestamp"
+      },
+      {
+        "name": "user_id",
+        "description": "ID of the user associated with this coin transaction",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 3,
+          "reason": "Links financial transaction to specific user"
+        },
+        "taxonomy": {
+          "category": "Financial Transaction",
+          "subject": "User coin activity"
+        }
+      },
+      {
+        "name": "amount",
+        "description": "Amount of coins added (positive) or deducted (negative)",
+        "type": 2,
+        "compliance": {
+          "confidentiality": 3,
+          "reason": "Sensitive financial transaction amount data"
+        },
+        "taxonomy": {
+          "category": "Financial",
+          "subject": "Transaction amount"
+        },
+        "numeric": "int"
+      },
+      {
+        "name": "reason",
+        "description": "Explanation for the coin transaction",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal transaction justification data"
+        },
+        "taxonomy": {
+          "category": "Transaction",
+          "subject": "Transaction reason"
+        }
+      },
+      {
+        "name": "created_at",
+        "description": "Timestamp unix when the coin transaction was recorded in 10-digit string",
+        "type": 1,
+        "compliance": {
+          "confidentiality": 2,
+          "reason": "Internal transaction timestamp data"
+        },
+        "taxonomy": {
+          "category": "Transaction",
+          "subject": "Transaction timestamp"
+        },
+        "format": "timestamp"
+      }
+    ],
+    "indexes": [
+      {
+        "fields": [
+          "id"
+        ],
+        "unique": true,
+        "primary": true
+      },
+      {
+        "fields": [
+          "data_creator"
+        ]
+      },
+      {
+        "fields": [
+          "data_updater"
+        ]
+      },
+      {
+        "fields": [
+          "user_id"
+        ]
+      },
+      {
+        "fields": [
+          "created_at"
+        ],
+        "order": true
+      },
+      {
+        "fields": [
+          "created_at",
+          "user_id"
+        ],
+        "order": true
+      }
+    ],
+    "relations": [
+      {
+        "referencing_fields": [
+          "user_id"
+        ],
+        "referenced_entity": {
+          "name": "user"
+        },
+        "referenced_fields": [
+          "id"
+        ],
+        "cascade": true
+      }
+    ]
+  },
+  "task": {
+    "id": "69508ad312e93c1a0f4bc3a3",
+    "root": "69505d82ff5145db4db85a3f",
+    "project": "69505d82ff5145db4db85a3e",
+    "user": "c8a1a360-3031-70eb-0b84-3c4db877aac5"
+  },
+  "namespace": {
+    "id": "01987547fc6c72ecb453bd2736bd4ea0",
+    "tenant": 2,
+    "name": "global-1",
+    "default": true
+  },
+  "revision": 1
+}
