@@ -217,9 +217,7 @@ function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent rounded-xl pointer-events-none" />
         <CardHeader className="space-y-2 pb-6 relative">
           <div className="flex items-center justify-center mb-2">
-            <div className="size-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center shadow-lg shadow-amber-500/20 overflow-hidden">
-              <img src="https://images.ygoprodeck.com/images/misc/logo_sm.png" alt="Yu-Gi-Oh!" className="w-full h-full object-contain p-1" />
-            </div>
+            <img src="https://images.ygoprodeck.com/images/cards/78371393.jpg" alt="Card" className="size-12 rounded-lg shadow-lg border-2 border-amber-400/50" />
           </div>
           <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent drop-shadow-sm">
             Ryunix Format
@@ -279,9 +277,7 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
       <header className="bg-slate-900/90 backdrop-blur-xl border-b border-amber-500/30 shadow-2xl shadow-amber-500/10 sticky top-0 z-50 relative">
         <div className="container mx-auto px-4 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="size-12 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 rounded-xl flex items-center justify-center shadow-xl shadow-amber-500/30 ring-2 ring-amber-400/20 overflow-hidden">
-              <img src="https://images.ygoprodeck.com/images/misc/logo_sm.png" alt="Yu-Gi-Oh!" className="w-full h-full object-contain p-1" />
-            </div>
+            <img src="https://images.ygoprodeck.com/images/cards/78371393.jpg" alt="Card" className="size-12 rounded-lg shadow-xl border-2 border-amber-400/50" />
             <div>
               <h1 className="text-3xl font-black bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent drop-shadow-lg">Ryunix Format</h1>
               <p className="text-sm text-slate-400 font-medium mt-0.5">
