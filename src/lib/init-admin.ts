@@ -3,17 +3,17 @@ import { hashPassword } from "@/lib/auth";
 
 export async function initializeAdminUser() {
   try {
-    const admin = await getUserByUsername("admin");
+    const admin = await getUserByUsername("Ryunix");
 
     if (!admin) {
-      const passwordHash = await hashPassword("admin");
+      const passwordHash = await hashPassword("Crystron");
       await createUser({
-        username: "admin",
+        username: "Ryunix",
         password_hash: passwordHash,
         coin: 0,
         is_admin: true,
       });
-      console.log("Admin user created successfully");
+      console.log("Admin user 'Ryunix' created successfully");
     } else {
       console.debug('Admin user already exists:', admin.username);
     }
