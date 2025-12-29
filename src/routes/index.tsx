@@ -218,7 +218,7 @@ function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
         <CardHeader className="space-y-2 pb-6 relative">
           <div className="flex items-center justify-center mb-2">
             <div className="size-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center shadow-lg shadow-amber-500/20 overflow-hidden">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Yu-Gi-Oh%21_English_logo.svg/320px-Yu-Gi-Oh%21_English_logo.svg.png" alt="Yu-Gi-Oh!" className="w-full h-full object-contain p-1" />
+              <img src="https://images.ygoprodeck.com/images/misc/logo_sm.png" alt="Yu-Gi-Oh!" className="w-full h-full object-contain p-1" />
             </div>
           </div>
           <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent drop-shadow-sm">
@@ -280,7 +280,7 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
         <div className="container mx-auto px-4 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="size-12 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 rounded-xl flex items-center justify-center shadow-xl shadow-amber-500/30 ring-2 ring-amber-400/20 overflow-hidden">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Yu-Gi-Oh%21_English_logo.svg/320px-Yu-Gi-Oh%21_English_logo.svg.png" alt="Yu-Gi-Oh!" className="w-full h-full object-contain p-1" />
+              <img src="https://images.ygoprodeck.com/images/misc/logo_sm.png" alt="Yu-Gi-Oh!" className="w-full h-full object-contain p-1" />
             </div>
             <div>
               <h1 className="text-3xl font-black bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent drop-shadow-lg">Ryunix Format</h1>
