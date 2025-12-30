@@ -1,5 +1,9 @@
 {
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "public": true,
+  "staticRoots": ["./public", "./dist"],
+  "cleanUrls": true,
+  "trailingSlash": false
 }

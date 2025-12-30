@@ -224,7 +224,7 @@ function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
       <Card className="w-full max-w-md border border-slate-700 bg-slate-800">
         <CardHeader className="space-y-2 pb-6">
           <div className="flex items-center justify-center gap-4 mb-2">
-            <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-12 w-auto" />
+            <img src="/logo.svg" alt="Yu-Gi-Oh!" className="h-12 w-auto" />
           </div>
           <CardTitle className="text-3xl font-bold text-center text-amber-400">
             Ryunix Format
@@ -280,7 +280,7 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
       <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-10 w-auto" />
+            <img src="/logo.svg" alt="Yu-Gi-Oh!" className="h-10 w-auto" />
             <div>
               <h1 className="text-3xl font-black text-amber-400">Ryunix Format</h1>
               <p className="text-sm text-slate-400 font-medium mt-0.5">

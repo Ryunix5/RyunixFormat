@@ -1,0 +1,17 @@
+<!-- Simple inline PNG-encoded Yu-Gi-Oh! logo as fallback -->
+<!-- This is a minimal placeholder that will work on all platforms -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 150" width="500" height="150">
+  <style>
+    .yugioh-text { 
+      font-family: 'Arial Black', 'Arial', sans-serif; 
+      font-weight: 900;
+      font-size: 72px;
+      fill: #DC143C;
+      stroke: #000;
+      stroke-width: 2px;
+      text-anchor: middle;
+    }
+  </style>
+  <rect width="500" height="150" fill="#000"/>
+  <text x="250" y="105" class="yugioh-text">Yu-Gi-Oh!</text>
+</svg>
