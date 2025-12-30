@@ -2957,8 +2957,9 @@ async function persistModificationsToDb() {
       customStaples: customStaples,
       removedStaples: Array.from(removedStaples),
     };
+    console.log('💾 Persisting modifications to DB...', { payload });
     await orm.upsertMods(payload);
-    console.debug('Persisted modifications to DB', { archetypes: Object.keys(cardModifications).length, customStaples: customStaples.length, removedStaples: removedStaples.size });
+    console.log('✅ Persisted modifications to DB', { archetypes: Object.keys(cardModifications).length, customStaples: customStaples.length, removedStaples: removedStaples.size, payload });
     
     // Notify other tabs via BroadcastChannel
     try {
@@ -2971,7 +2972,7 @@ async function persistModificationsToDb() {
       console.warn('Failed to broadcast modification update', e);
     }
   } catch (e) {
-    console.error('Failed to persist modifications to DB', e);
+    console.error('❌ Failed to persist modifications to DB', e);
   }
 }
 
@@ -3544,6 +3545,7 @@ function ArchetypeCardsTab() {
                             if (!archetype) return;
                             
                             const newPrice = META_RATING_PRICES[newRating];
+                            console.log(`📝 Changing rating for ${selectedArchetype} from ${archetype.rating} to ${newRating}`, { newPrice });
                             
                             // Update in-memory cardModifications
                             const mod = cardModifications[selectedArchetype] || {};
@@ -3552,6 +3554,7 @@ function ArchetypeCardsTab() {
                               rating: newRating,
                               price: newPrice
                             };
+                            console.log('Updated cardModifications:', { [selectedArchetype]: cardModifications[selectedArchetype] });
                             
                             // Update the archetype in ARCHETYPE_DECKS array
                             const idx = ARCHETYPE_DECKS.findIndex(a => a.name === selectedArchetype);
