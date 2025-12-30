@@ -200,6 +200,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Iron Chain", rating: "F", price: 0, imageUrl: getCardImageUrl(26157485) }, // Iron Chain Dragon
   { name: "Junk", rating: "B", price: 50, imageUrl: getCardImageUrl(63977008) }, // Junk Warrior
   { name: "Jurrac", rating: "F", price: 0, imageUrl: getCardImageUrl(21263083) }, // Jurrac Meteor
+  { name: "K9", rating: "S", price: 200, imageUrl: getCardImageUrl(92248362) }, // K9-17 Izuna
   { name: "Kaiju", rating: "A", price: 100, imageUrl: getCardImageUrl(10389142) }, // Gameciel, the Sea Turtle Kaiju
   { name: "Karakuri", rating: "C", price: 25, imageUrl: getCardImageUrl(85541675) }, // Karakuri Steel Shogun mdl 00X "Bureido"
   { name: "Kashtira", rating: "S", price: 200, imageUrl: getCardImageUrl(9272381) }, // Kashtira Fenrir
