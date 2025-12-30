@@ -10,6 +10,9 @@ export default defineConfig({
 	base: process.env.TENANT_ID ? `/${process.env.TENANT_ID}/` : "./",
 	define: {
 		"import.meta.env.TENANT_ID": JSON.stringify(process.env.TENANT_ID || ""),
+		// Map NEXT_PUBLIC_ vars to import.meta.env for Vercel compatibility
+		"import.meta.env.NEXT_PUBLIC_SUPABASE_URL": JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || ""),
+		"import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ""),
 	},
 	plugins: [
 		TanStackRouterVite({
