@@ -269,7 +269,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     const { error } = await supabase
       .from('banlist')
-      .upsert(records, { onConflict: 'card_name' });
+      .upsert(records as any, { onConflict: 'card_name' });
 
     if (error) {
       console.error(`[API-${requestId}] ❌ Supabase error:`, error.message);
