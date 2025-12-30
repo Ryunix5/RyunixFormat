@@ -18,6 +18,7 @@ import { PurchaseORM, type PurchaseModel, PurchaseItemType } from "@/sdk/databas
 import { CoinLogORM, type CoinLogModel } from "@/sdk/database/orm/orm_coin_log";
 import { UserORM, type UserModel } from "@/sdk/database/orm/orm_user";
 import { BanlistORM } from "@/sdk/database/orm/orm_banlist";
+import { CardCatalogORM } from "@/sdk/database/orm/orm_cards";
 import type { BanStatus } from "@/data/banlist";
 import { ARCHETYPE_DECKS, STAPLE_CARDS, type CatalogItem, type MetaRating, META_RATING_PRICES } from "@/data/yugioh-catalog";
 import { hashPassword, verifyPassword, createAuthToken, getAuthToken, setAuthToken, clearAuthToken } from "@/lib/auth";
@@ -656,7 +657,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
     setArchetypeCards([]);
 
     try {
-      const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+      const dbOrm = CardCatalogORM.getInstance();
       let baseCards: any[] = [];
 
       // Priority 1: Check admin's in-memory cache (fastest, reflects admin's current edits)
@@ -1388,7 +1389,7 @@ function CollectionTab({ userId }: { userId: string }) {
     setArchetypeCards([]);
 
     try {
-      const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+      const dbOrm = CardCatalogORM.getInstance();
       let baseCards: any[] = [];
 
       // Priority 1: Check admin's in-memory cache (fastest, reflects admin's current edits)
@@ -3196,7 +3197,7 @@ function ArchetypeCardsTab() {
 
       // Try loading from local DB first
       try {
-        const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+        const dbOrm = CardCatalogORM.getInstance();
         const dbCards = await dbOrm.getByArchetype(archetypeName, 500);
         if (dbCards && dbCards.length > 0) {
           const normalized = dbCards.map((r: any) => {
@@ -3222,7 +3223,7 @@ function ArchetypeCardsTab() {
           
           // Persist to DB for faster future loads
           try {
-            const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+            const dbOrm = CardCatalogORM.getInstance();
             const payload = data.data.map((c: YGOCard) => ({
               name: c.name,
               data: c,
@@ -3301,7 +3302,7 @@ function ArchetypeCardsTab() {
       archetypeCardsCache[selectedArchetype] = updatedCards;
       
       // Persist to DB
-      const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+      const dbOrm = CardCatalogORM.getInstance();
       await dbOrm.ensureArchetypeOnCard(card.name, selectedArchetype, card);
       
       notifyModificationChange(); // Notify player panels to refresh
@@ -3331,7 +3332,7 @@ function ArchetypeCardsTab() {
       archetypeCardsCache[selectedArchetype] = updatedCards;
       
       // Remove archetype from card in DB
-      const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+      const dbOrm = CardCatalogORM.getInstance();
       const existing = await dbOrm.getByName(cardName);
       if (existing && existing.archetypes) {
         const newArchetypes = existing.archetypes.filter((a: string) => a !== selectedArchetype);
@@ -3372,7 +3373,7 @@ function ArchetypeCardsTab() {
           setArchetypeCards(data.data);
           
           // Persist to DB
-          const dbOrm = (await import('@/sdk/database/orm/orm_cards')).CardCatalogORM.getInstance();
+          const dbOrm = CardCatalogORM.getInstance();
           const payload = data.data.map((c: YGOCard) => ({
             name: c.name,
             data: c,
