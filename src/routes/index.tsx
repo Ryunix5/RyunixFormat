@@ -938,16 +938,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                     <span className="font-semibold text-slate-100 truncate">{displayName}</span>
                   )}
                 </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge className={`font-bold shrink-0 cursor-help ${getRatingStyle(rating)}`}>{rating}</Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{getRatingDescription(rating)}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Badge className={`font-bold shrink-0 ${getRatingStyle(rating)}`}>{rating}</Badge>
                 <div className="flex items-center gap-1.5 bg-amber-900 px-2 py-1 rounded border border-amber-700">
                   <Coins className="size-3.5 text-amber-400" />
                   <span className="font-bold text-amber-300 text-sm">{price}</span>
@@ -979,16 +970,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                       <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm font-bold">?</div>
                     )}
                   </div>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge className={`font-bold text-xs cursor-help ${getRatingStyle(rating)}`}>{rating}</Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{getRatingDescription(rating)}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Badge className={`font-bold text-xs ${getRatingStyle(rating)}`}>{rating}</Badge>
                 </div>
                 {category === "decks" ? (
                   <span className="font-semibold text-sm text-slate-100 truncate cursor-pointer hover:text-amber-300 transition-colors" onClick={() => handleArchetypeClick(item.name)} title={displayName}>
@@ -1041,16 +1023,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                         ) : (
                           <CardTitle className="text-lg font-bold text-slate-100 truncate">{displayName}</CardTitle>
                         )}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge className={`font-bold shrink-0 cursor-help ${getRatingStyle(rating)}`}>{rating}</Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{getRatingDescription(rating)}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Badge className={`font-bold shrink-0 ${getRatingStyle(rating)}`}>{rating}</Badge>
                       </div>
                     </div>
                   </div>
