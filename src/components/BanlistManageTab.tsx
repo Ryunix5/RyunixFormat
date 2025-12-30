@@ -164,22 +164,29 @@ export function BanlistManageTab({ onBanlistChange }: BanlistManageTabProps) {
     try {
       setIsSaving(true);
       setError('');
+      setSuccessMessage('Fetching TCG banlist...');
+      
       const response = await fetch('/api/fetch-banlist', { method: 'POST' });
+      
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(data.error || data.details || `HTTP ${response.status}`);
+      }
+      
       const data = await response.json();
-
-      if (!response.ok) throw new Error(data.error);
 
       // Reload banlist
       await loadBanlist();
-      setSuccessMessage(`Fetched and updated TCG banlist (${data.cardsUpdated} cards)`);
+      setSuccessMessage(`✅ Fetched and updated TCG banlist (${data.cardsUpdated} cards)`);
 
       // Notify parent component
       onBanlistChange?.();
 
       setTimeout(() => setSuccessMessage(''), 5000);
     } catch (err) {
-      setError(`Failed to fetch TCG banlist: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      console.error(err);
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      setError(`❌ Failed to fetch TCG banlist: ${errorMsg}`);
+      console.error('Full error:', err);
     } finally {
       setIsSaving(false);
     }

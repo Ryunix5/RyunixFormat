@@ -2,10 +2,17 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import type { BanStatus } from '@/data/banlist';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+// Validate environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase environment variables');
+  console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'set' : 'NOT SET');
+  console.error('SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? 'set' : 'NOT SET');
+}
+
+const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 interface YGOProdeckBanlistCard {
   id: number;
@@ -187,14 +194,40 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  // Handle OPTIONS
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   // Only allow GET and POST
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    // Validate environment first
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ Supabase environment variables missing');
+      return res.status(500).json({
+        error: 'Server configuration error',
+        details: 'Missing Supabase environment variables',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    console.log('Starting banlist fetch request...');
+
     // Fetch latest TCG banlist
     const bannedCards = await fetchTCGBanlist();
+    console.log(`✅ Successfully fetched ${bannedCards.length} banned cards`);
 
     // Update database with TCG banlist (source: 'tcg')
     const records = bannedCards.map((card) => ({
@@ -204,22 +237,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       source: 'tcg' as const,
     }));
 
+    console.log(`Upserting ${records.length} records to Supabase...`);
+    
     const { error } = await supabase
       .from('banlist')
       .upsert(records, { onConflict: 'card_name' });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Supabase upsert error:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    console.log(`✅ Successfully updated banlist in database`);
 
     return res.status(200).json({
       success: true,
       message: `Updated banlist with ${bannedCards.length} cards`,
       cardsUpdated: bannedCards.length,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error in fetch-banlist:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : '';
+    
+    console.error('❌ Error in fetch-banlist handler:', errorMessage);
+    console.error('Stack:', errorStack);
+
     return res.status(500).json({
       error: 'Failed to fetch and update banlist',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: errorMessage,
+      timestamp: new Date().toISOString(),
     });
   }
 }
