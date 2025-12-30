@@ -2,23 +2,36 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import type { BanStatus } from '@/data/banlist';
 
-// Validate environment variables
-// Try both NEXT_PUBLIC and VITE prefixes since user might use either
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Lazy initialization - only create client when needed
+let supabaseClient: ReturnType<typeof createClient> | null = null;
 
-if (!supabaseUrl) {
-  console.error('❌ Missing Supabase URL');
-  console.error('Expected: NEXT_PUBLIC_SUPABASE_URL or VITE_SUPABASE_URL');
+function getSupabaseClient() {
+  if (supabaseClient) return supabaseClient;
+
+  // Try multiple environment variable names
+  const supabaseUrl = 
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 
+    process.env.VITE_SUPABASE_URL ||
+    '';
+  
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+  console.log('[INIT] Environment check:');
+  console.log('[INIT] NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'SET' : 'NOT SET');
+  console.log('[INIT] SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? 'SET' : 'NOT SET');
+  console.log('[INIT] Available env vars:', Object.keys(process.env).filter(k => k.includes('SUPABASE') || k.includes('supabase')).join(', '));
+
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL environment variable is required');
+  }
+
+  if (!supabaseKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required');
+  }
+
+  supabaseClient = createClient(supabaseUrl, supabaseKey);
+  return supabaseClient;
 }
-
-if (!supabaseKey) {
-  console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY');
-  console.error('This is a REQUIRED environment variable for the API to work');
-  console.error('Get it from: Supabase Dashboard → Settings → API → Service Role Secret Key');
-}
-
-const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 interface YGOProdeckBanlistCard {
   id: number;
@@ -223,18 +236,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log(`[API-${requestId}] Timestamp: ${new Date().toISOString()}`);
 
   try {
-    // Validate environment first
-    if (!supabaseUrl || !supabaseKey) {
-      console.error(`[API-${requestId}] ❌ Supabase config missing`);
-      console.error(`[API-${requestId}] URL set: ${!!supabaseUrl}, Key set: ${!!supabaseKey}`);
+    // Initialize Supabase client
+    let supabase;
+    try {
+      supabase = getSupabaseClient();
+      console.log(`[API-${requestId}] ✅ Supabase client initialized`);
+    } catch (initError) {
+      const msg = initError instanceof Error ? initError.message : String(initError);
+      console.error(`[API-${requestId}] ❌ Failed to initialize Supabase: ${msg}`);
       return res.status(500).json({
         error: 'Server configuration error',
-        details: 'Missing Supabase environment variables',
+        details: msg,
         timestamp: new Date().toISOString(),
       });
     }
 
-    console.log(`[API-${requestId}] ✅ Supabase config OK`);
     console.log(`[API-${requestId}] Starting TCG banlist fetch...`);
 
     // Fetch latest TCG banlist
