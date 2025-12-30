@@ -234,9 +234,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const requestId = Math.random().toString(36).substring(7);
   const startTime = Date.now();
   const overallTimeoutMs = 50000; // 50 second overall limit (Vercel Pro: 60s)
+  const testMode = req.query.test === 'true' || req.body?.test === true; // Allow testing without DB save
   
   console.log(`\n[API-${requestId}] ===== FETCH BANLIST REQUEST =====`);
   console.log(`[API-${requestId}] Method: ${req.method}`);
+  console.log(`[API-${requestId}] Test mode: ${testMode}`);
   console.log(`[API-${requestId}] Timestamp: ${new Date().toISOString()}`);
 
   try {
@@ -248,9 +250,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (initError) {
       const msg = initError instanceof Error ? initError.message : String(initError);
       console.error(`[API-${requestId}] ❌ Failed to initialize Supabase: ${msg}`);
+      
+      // Include diagnostic info about env vars
+      const diagnostics = {
+        has_url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        has_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        env_vars_available: Object.keys(process.env).filter(k => k.includes('SUPABASE') || k.includes('supabase')),
+      };
+      
       return res.status(500).json({
         error: 'Server configuration error',
         details: msg,
+        diagnostics,
         timestamp: new Date().toISOString(),
       });
     }
@@ -276,7 +287,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ]);
     } catch (fetchError) {
       const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+      const stack = fetchError instanceof Error ? fetchError.stack : '';
       console.error(`[API-${requestId}] ❌ Failed to fetch banlist: ${msg}`);
+      if (stack) {
+        console.error(`[API-${requestId}] Stack: ${stack}`);
+      }
       return res.status(500).json({
         error: 'Failed to fetch TCG banlist',
         details: msg,
@@ -294,15 +309,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       source: 'tcg' as const,
     }));
 
+    // If test mode, skip database save
+    if (testMode) {
+      const elapsed = Date.now() - startTime;
+      console.log(`[API-${requestId}] ✅ Test mode - skipped database save (${elapsed}ms)`);
+      return res.status(200).json({
+        success: true,
+        message: `Fetched ${bannedCards.length} cards (test mode - not saved)`,
+        cardsUpdated: 0,
+        cardsFetched: bannedCards.length,
+        sampleCards: bannedCards.slice(0, 5),
+        timestamp: new Date().toISOString(),
+        duration_ms: elapsed,
+      });
+    }
+
     console.log(`[API-${requestId}] Saving ${records.length} records to Supabase...`);
     
-    const { error } = await supabase
-      .from('banlist')
-      .upsert(records as any, { onConflict: 'card_name' });
+    try {
+      const { error } = await supabase
+        .from('banlist')
+        .upsert(records as any, { onConflict: 'card_name' });
 
-    if (error) {
-      console.error(`[API-${requestId}] ❌ Supabase error:`, error.message);
-      throw new Error(`Database error: ${error.message}`);
+      if (error) {
+        console.error(`[API-${requestId}] ❌ Supabase error:`, error.message);
+        console.error(`[API-${requestId}] Supabase error details:`, error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+    } catch (dbError) {
+      const dbMsg = dbError instanceof Error ? dbError.message : String(dbError);
+      console.error(`[API-${requestId}] ⚠️ Failed to save to database: ${dbMsg}`);
+      // Still return success with the fetched cards, even if DB save failed
+      const elapsed = Date.now() - startTime;
+      return res.status(200).json({
+        success: true,
+        message: `Fetched ${bannedCards.length} cards but failed to save to database`,
+        cardsUpdated: 0,
+        cardsFetched: bannedCards.length,
+        databaseError: dbMsg,
+        timestamp: new Date().toISOString(),
+        duration_ms: elapsed,
+      });
     }
 
     const elapsed = Date.now() - startTime;
@@ -319,8 +366,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : '';
+    const elapsed = Date.now() - startTime;
     
-    console.error(`[API-${requestId}] ❌ ERROR: ${errorMessage}`);
+    console.error(`[API-${requestId}] ❌ ERROR (${elapsed}ms): ${errorMessage}`);
     if (errorStack) {
       console.error(`[API-${requestId}] Stack trace:\n${errorStack}`);
     }
@@ -330,6 +378,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       error: 'Failed to fetch and update banlist',
       details: errorMessage,
       timestamp: new Date().toISOString(),
+      elapsed_ms: elapsed,
     });
   }
 }
