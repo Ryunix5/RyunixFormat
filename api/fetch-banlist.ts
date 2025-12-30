@@ -23,70 +23,127 @@ interface YGOProdeckBanlistCard {
 }
 
 // Parse banlist from YGOPRODECK
-// Fetches all cards and extracts their TCG banlist status
+// Fetches cards in batches and extracts their TCG banlist status
 async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatus }>> {
-  try {
-    const bannedCards: Array<{ name: string; status: BanStatus }> = [];
-    
-    console.log('Fetching TCG banlist from YGOPRODECK (14000+ cards)...');
-    
-    // Fetch all cards - YGOPRODECK returns all cards by default
-    // Must include User-Agent header to avoid 400 Bad Request
-    const response = await fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API returned status ${response.statusText} (${response.status})`);
-    }
-    
-    const text = await response.text();
-    if (!text || text.trim() === '') {
-      throw new Error('API returned empty response');
-    }
-    
-    let data;
+  const bannedCards: Array<{ name: string; status: BanStatus }> = [];
+  const batchSize = 5000;
+  let offset = 0;
+  let totalFetched = 0;
+  const maxCards = 50000; // Safety limit to prevent infinite loops
+
+  console.log('Starting TCG banlist fetch from YGOPRODECK...');
+  
+  while (totalFetched < maxCards) {
     try {
-      data = JSON.parse(text);
-    } catch (parseError) {
-      console.error('Failed to parse JSON:', text.substring(0, 200));
-      throw new Error('Invalid JSON response from API');
-    }
-    
-    if (!data || !data.data || !Array.isArray(data.data)) {
-      throw new Error(`Invalid API response format: ${JSON.stringify(data).substring(0, 200)}`);
-    }
+      const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?num=${batchSize}&offset=${offset}`;
+      console.log(`[Batch ${Math.floor(offset / batchSize) + 1}] Requesting: ${url}`);
 
-    console.log(`Received ${data.data.length} cards from API`);
+      // Create fetch request with reasonable timeout via AbortController
+      const abortController = new AbortController();
+      const timeoutHandle = setTimeout(() => abortController.abort(), 60000); // 60 second timeout per batch
 
-    // Parse banlist from cards
-    data.data.forEach((card: any) => {
-      if (card.banlist_info && card.banlist_info.ban_tcg) {
-        const status = card.banlist_info.ban_tcg;
-        let banStatus: BanStatus = 'unlimited';
-        
-        if (status === 'Forbidden') {
-          banStatus = 'forbidden';
-        } else if (status === 'Limited') {
-          banStatus = 'limited';
-        } else if (status === 'Semi-Limited') {
-          banStatus = 'semi-limited';
-        }
-        
-        if (banStatus !== 'unlimited') {
-          bannedCards.push({ name: card.name, status: banStatus });
+      let response;
+      try {
+        response = await fetch(url, {
+          signal: abortController.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+        });
+      } finally {
+        clearTimeout(timeoutHandle);
+      }
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`[Batch ${Math.floor(offset / batchSize) + 1}] HTTP ${response.status} error. Response: ${errorBody.substring(0, 200)}`);
+        // If this is the first batch and we get an error, throw. Otherwise stop pagination.
+        if (offset === 0) {
+          throw new Error(`API returned HTTP ${response.status}`);
+        } else {
+          console.log('Stopping pagination due to error on subsequent batch');
+          break;
         }
       }
-    });
 
-    console.log(`Extracted ${bannedCards.length} banned cards from YGOPRODECK`);
-    return bannedCards;
-  } catch (error) {
-    console.error('Error fetching TCG banlist:', error);
-    throw error;
+      const responseText = await response.text();
+      if (!responseText || responseText.trim().length === 0) {
+        console.warn(`[Batch ${Math.floor(offset / batchSize) + 1}] Empty response, stopping pagination`);
+        break;
+      }
+
+      // Debug: Log first 500 characters of response to check if it's HTML or JSON
+      const responseStart = responseText.substring(0, 100);
+      console.log(`[Batch ${Math.floor(offset / batchSize) + 1}] Response starts with: ${responseStart}`);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        // Check if it's HTML error response
+        if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
+          console.error(`[Batch ${Math.floor(offset / batchSize) + 1}] Received HTML instead of JSON. This likely means the API returned an error page.`);
+          console.error(`First 500 chars: ${responseText.substring(0, 500)}`);
+          throw new Error(`API returned HTML error page instead of JSON. First part: ${responseText.substring(0, 200)}`);
+        }
+        console.error(`[Batch ${Math.floor(offset / batchSize) + 1}] JSON parse error. Response: ${responseText.substring(0, 500)}`);
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
+      }
+
+      if (!data || !Array.isArray(data.data)) {
+        console.error(`[Batch ${Math.floor(offset / batchSize) + 1}] Invalid response format`);
+        break;
+      }
+
+      const cardsInBatch = data.data.length;
+      console.log(`[Batch ${Math.floor(offset / batchSize) + 1}] Received ${cardsInBatch} cards`);
+
+      // Extract banned cards from this batch
+      let batchBans = 0;
+      for (const card of data.data) {
+        if (card.banlist_info?.ban_tcg) {
+          const banStatus = card.banlist_info.ban_tcg;
+          let status: BanStatus = 'unlimited';
+          
+          if (banStatus === 'Forbidden') {
+            status = 'forbidden';
+          } else if (banStatus === 'Limited') {
+            status = 'limited';
+          } else if (banStatus === 'Semi-Limited') {
+            status = 'semi-limited';
+          }
+          
+          if (status !== 'unlimited') {
+            bannedCards.push({ name: card.name, status });
+            batchBans++;
+          }
+        }
+      }
+      
+      console.log(`[Batch ${Math.floor(offset / batchSize) + 1}] Found ${batchBans} banned cards`);
+
+      // If we got fewer cards than requested, we've reached the end
+      if (cardsInBatch < batchSize) {
+        console.log('Reached end of database (fewer cards than batch size)');
+        break;
+      }
+
+      totalFetched += cardsInBatch;
+      offset += batchSize;
+
+    } catch (error) {
+      console.error(`Error fetching batch at offset ${offset}:`, error instanceof Error ? error.message : error);
+      // If we haven't fetched anything yet, this is a critical error
+      if (bannedCards.length === 0) {
+        throw error;
+      }
+      // Otherwise, return what we have so far
+      break;
+    }
   }
+
+  console.log(`✅ Banlist fetch complete: ${bannedCards.length} banned cards found (from ${totalFetched} total cards)`);
+  return bannedCards;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
