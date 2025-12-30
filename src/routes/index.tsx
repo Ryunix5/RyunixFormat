@@ -3080,6 +3080,12 @@ function ArchetypeCardsTab() {
   const [imageSearchResults, setImageSearchResults] = useState<YGOCard[]>([]);
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
 
+  // Get ban status for a card
+  const _banlistVersion = useBanlistVersion();
+  const getBanStatus = useCallback((cardName: string): BanStatus => {
+    return (banlist[cardName]?.banStatus as BanStatus) ?? 'unlimited';
+  }, [_banlistVersion]);
+
   // Rating style helper
   function getRatingBadgeStyle(rating: string): string {
     switch (rating) {
@@ -3747,7 +3753,9 @@ function ArchetypeCardsTab() {
                     ) : (
                       <div className="max-h-[400px] overflow-y-auto pr-2">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {archetypeCards.map((card) => (
+                          {archetypeCards.map((card) => {
+                            const cardBanStatus = getBanStatus(card.name);
+                            return (
                             <div
                               key={card.id || card.name}
                               className="flex items-center gap-2 p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-800 group"
@@ -3763,7 +3771,7 @@ function ArchetypeCardsTab() {
                                 <div className="text-sm font-medium text-slate-100 truncate">{card.name}</div>
                                 <div className="text-xs text-slate-400 truncate">{card.type}</div>
                               </div>
-                              <BanIndicator banStatus={getBanStatus(card.name)} size="sm" />
+                              <BanIndicator banStatus={cardBanStatus} size="sm" />
                               <button
                                 type="button"
                                 onClick={() => removeCardFromArchetype(card.name)}
@@ -3773,7 +3781,8 @@ function ArchetypeCardsTab() {
                                 <X className="size-4" />
                               </button>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
