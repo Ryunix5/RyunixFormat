@@ -39,13 +39,13 @@ interface YGOProdeckBanlistCard {
 // Fetches cards in batches and extracts their TCG banlist status
 async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatus }>> {
   const bannedCards: Array<{ name: string; status: BanStatus }> = [];
-  const batchSize = 2500; // Smaller batches for reliability
+  const batchSize = 2500;
   let offset = 0;
   let totalFetched = 0;
-  const maxCards = 50000; // Safety limit
+  const maxCards = 50000;
   const maxRetries = 3;
 
-  console.log('Starting TCG banlist fetch from YGOPRODECK...');
+  console.log('[BANLIST] Starting TCG banlist fetch from YGOPRODECK...');
   
   while (totalFetched < maxCards) {
     let retryCount = 0;
@@ -55,17 +55,21 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
     while (retryCount < maxRetries && !batchSuccess) {
       try {
         const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?num=${batchSize}&offset=${offset}`;
+        const batchNum = Math.floor(offset / batchSize) + 1;
+        
         if (retryCount > 0) {
-          console.log(`[Batch ${Math.floor(offset / batchSize) + 1}] Retry ${retryCount}/${maxRetries - 1} - Requesting: ${url}`);
+          console.log(`[BANLIST] Batch ${batchNum} - Retry ${retryCount}/${maxRetries - 1}`);
         } else {
-          console.log(`[Batch ${Math.floor(offset / batchSize) + 1}] Requesting: ${url}`);
+          console.log(`[BANLIST] Batch ${batchNum} - Fetching ${batchSize} cards from offset ${offset}`);
         }
 
-        // Create fetch request with timeout
         const abortController = new AbortController();
-        const timeoutHandle = setTimeout(() => abortController.abort(), 45000); // 45 second timeout per batch
+        const timeoutHandle = setTimeout(() => {
+          console.log(`[BANLIST] Batch ${batchNum} - Timeout after 45s, aborting`);
+          abortController.abort();
+        }, 45000);
 
-        let response;
+        let response: Response;
         try {
           response = await fetch(url, {
             signal: abortController.signal,
@@ -73,74 +77,70 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             },
           });
-        } finally {
+        } catch (fetchError) {
           clearTimeout(timeoutHandle);
-        }
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          const errorMsg = `HTTP ${response.status}: ${errorBody.substring(0, 150)}`;
-          console.error(`[Batch ${Math.floor(offset / batchSize) + 1}] ${errorMsg}`);
-          lastError = new Error(errorMsg);
+          const fetchErrorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+          console.error(`[BANLIST] Batch ${batchNum} - Fetch failed: ${fetchErrorMsg}`);
+          lastError = new Error(`Fetch failed: ${fetchErrorMsg}`);
           retryCount++;
           if (retryCount < maxRetries) {
-            console.log(`[Batch] Waiting 2 seconds before retry...`);
-            await new Promise(r => setTimeout(r, 2000)); // Wait before retry
+            await new Promise(r => setTimeout(r, 2000 * retryCount));
           }
           continue;
         }
 
-        const responseText = await response.text();
+        clearTimeout(timeoutHandle);
+
+        console.log(`[BANLIST] Batch ${batchNum} - Response status: ${response.status}`);
+
+        if (!response.ok) {
+          const errorBody = await response.text().catch(() => '');
+          console.error(`[BANLIST] Batch ${batchNum} - HTTP ${response.status}: ${errorBody.substring(0, 200)}`);
+          lastError = new Error(`HTTP ${response.status}`);
+          retryCount++;
+          if (retryCount < maxRetries) {
+            await new Promise(r => setTimeout(r, 2000 * retryCount));
+          }
+          continue;
+        }
+
+        const responseText = await response.text().catch((e) => {
+          console.error(`[BANLIST] Batch ${batchNum} - Failed to read response: ${e}`);
+          throw e;
+        });
+
         if (!responseText || responseText.trim().length === 0) {
-          console.warn(`[Batch ${Math.floor(offset / batchSize) + 1}] Empty response, stopping pagination`);
-          batchSuccess = true; // End pagination
+          console.log(`[BANLIST] Batch ${batchNum} - Empty response, stopping pagination`);
+          batchSuccess = true;
           break;
         }
 
-        // Debug: Log first 100 characters of response to check if it's HTML or JSON
-        const responseStart = responseText.substring(0, 100);
-        console.log(`[Batch ${Math.floor(offset / batchSize) + 1}] Response starts with: ${responseStart.substring(0, 50)}...`);
+        console.log(`[BANLIST] Batch ${batchNum} - Response size: ${responseText.length} bytes`);
 
         let data;
         try {
           data = JSON.parse(responseText);
         } catch (parseError) {
-          // Check if it's HTML error response
-          if (responseText.substring(0, 200).includes('<html') || 
-              responseText.substring(0, 200).includes('<!DOCTYPE') || 
-              responseText.substring(0, 200).includes('A server') ||
-              responseText.substring(0, 200).includes('error')) {
-            console.error(`[Batch ${Math.floor(offset / batchSize) + 1}] ❌ Received HTML/error instead of JSON`);
-            console.error(`Response: ${responseText.substring(0, 300)}`);
-            lastError = new Error(`API returned HTML/error page: ${responseText.substring(0, 100)}`);
-            retryCount++;
-            if (retryCount < maxRetries) {
-              console.log(`[Batch] Waiting 3 seconds before retry...`);
-              await new Promise(r => setTimeout(r, 3000));
-            }
-            continue;
-          }
-          console.error(`[Batch ${Math.floor(offset / batchSize) + 1}] JSON parse failed. Response length: ${responseText.length}`);
-          lastError = new Error(`Invalid JSON: ${responseText.substring(0, 100)}`);
+          console.error(`[BANLIST] Batch ${batchNum} - JSON parse failed. First 200 chars: ${responseText.substring(0, 200)}`);
+          lastError = new Error(`Invalid JSON`);
           retryCount++;
           if (retryCount < maxRetries) {
-            console.log(`[Batch] Waiting 2 seconds before retry...`);
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 2000 * retryCount));
           }
           continue;
         }
 
         if (!data || !Array.isArray(data.data)) {
-          console.error(`[Batch ${Math.floor(offset / batchSize) + 1}] Invalid response format - no data array`);
-          lastError = new Error(`API response missing data array`);
+          console.error(`[BANLIST] Batch ${batchNum} - Invalid response format (no data array)`);
+          lastError = new Error(`Invalid response format`);
           retryCount++;
           continue;
         }
 
         const cardsInBatch = data.data.length;
-        console.log(`[Batch ${Math.floor(offset / batchSize) + 1}] ✅ Success - ${cardsInBatch} cards received`);
+        console.log(`[BANLIST] Batch ${batchNum} - ✅ Received ${cardsInBatch} cards`);
 
-        // Extract banned cards from this batch
+        // Extract banned cards
         let batchBans = 0;
         for (const card of data.data) {
           if (card.banlist_info?.ban_tcg) {
@@ -162,11 +162,10 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
           }
         }
         
-        console.log(`[Batch ${Math.floor(offset / batchSize) + 1}] Found ${batchBans} banned cards`);
+        console.log(`[BANLIST] Batch ${batchNum} - Found ${batchBans} banned cards`);
 
-        // If we got fewer cards than requested, we've reached the end
         if (cardsInBatch < batchSize) {
-          console.log('Reached end of database (fewer cards than batch size)');
+          console.log('[BANLIST] Reached end of database');
           batchSuccess = true;
           break;
         }
@@ -176,26 +175,26 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
         batchSuccess = true;
 
       } catch (error) {
-        console.error(`[Batch] Fetch error (retry ${retryCount}):`, error instanceof Error ? error.message : error);
-        lastError = error instanceof Error ? error : new Error(String(error));
+        const batchNum = Math.floor(offset / batchSize) + 1;
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[BANLIST] Batch ${batchNum} - Unexpected error: ${errorMsg}`);
+        lastError = error instanceof Error ? error : new Error(errorMsg);
         retryCount++;
       }
     }
 
-    // If batch failed after all retries, decide whether to continue
     if (!batchSuccess) {
-      console.error(`[Batch ${Math.floor(offset / batchSize) + 1}] ❌ Failed after ${maxRetries} attempts. Last error: ${lastError?.message}`);
+      const batchNum = Math.floor(offset / batchSize) + 1;
+      console.error(`[BANLIST] Batch ${batchNum} - Failed after ${maxRetries} attempts`);
       if (bannedCards.length === 0) {
-        // No data at all, throw the error
-        throw lastError || new Error('Failed to fetch banlist');
+        throw lastError || new Error('Failed to fetch any cards from YGOPRODECK');
       }
-      // We have some data, so return it
-      console.log('Stopping pagination due to repeated failures');
+      console.log('[BANLIST] Returning partial results');
       break;
     }
   }
 
-  console.log(`✅ Banlist fetch complete: ${bannedCards.length} banned cards found (from ${totalFetched} total cards)`);
+  console.log(`[BANLIST] ✅ Fetch complete: ${bannedCards.length} banned cards from ${totalFetched} total`);
   return bannedCards;
 }
 
@@ -218,10 +217,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`\n[API-${requestId}] ===== FETCH BANLIST REQUEST =====`);
+  console.log(`[API-${requestId}] Method: ${req.method}`);
+  console.log(`[API-${requestId}] Timestamp: ${new Date().toISOString()}`);
+
   try {
     // Validate environment first
     if (!supabaseUrl || !supabaseKey) {
-      console.error('❌ Supabase environment variables missing');
+      console.error(`[API-${requestId}] ❌ Supabase config missing`);
+      console.error(`[API-${requestId}] URL set: ${!!supabaseUrl}, Key set: ${!!supabaseKey}`);
       return res.status(500).json({
         error: 'Server configuration error',
         details: 'Missing Supabase environment variables',
@@ -229,13 +234,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    console.log('Starting banlist fetch request...');
+    console.log(`[API-${requestId}] ✅ Supabase config OK`);
+    console.log(`[API-${requestId}] Starting TCG banlist fetch...`);
 
     // Fetch latest TCG banlist
     const bannedCards = await fetchTCGBanlist();
-    console.log(`✅ Successfully fetched ${bannedCards.length} banned cards`);
+    console.log(`[API-${requestId}] ✅ Fetched ${bannedCards.length} banned cards`);
 
-    // Update database with TCG banlist (source: 'tcg')
+    // Prepare records for database
     const records = bannedCards.map((card) => ({
       card_name: card.name,
       ban_status: card.status,
@@ -243,18 +249,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       source: 'tcg' as const,
     }));
 
-    console.log(`Upserting ${records.length} records to Supabase...`);
+    console.log(`[API-${requestId}] Saving ${records.length} records to Supabase...`);
     
     const { error } = await supabase
       .from('banlist')
       .upsert(records, { onConflict: 'card_name' });
 
     if (error) {
-      console.error('❌ Supabase upsert error:', error);
+      console.error(`[API-${requestId}] ❌ Supabase error:`, error.message);
       throw new Error(`Database error: ${error.message}`);
     }
 
-    console.log(`✅ Successfully updated banlist in database`);
+    console.log(`[API-${requestId}] ✅ Successfully saved to database`);
+    console.log(`[API-${requestId}] ===== REQUEST COMPLETE ====\n`);
 
     return res.status(200).json({
       success: true,
@@ -266,8 +273,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : '';
     
-    console.error('❌ Error in fetch-banlist handler:', errorMessage);
-    console.error('Stack:', errorStack);
+    console.error(`[API-${requestId}] ❌ ERROR: ${errorMessage}`);
+    if (errorStack) {
+      console.error(`[API-${requestId}] Stack trace:\n${errorStack}`);
+    }
+    console.error(`[API-${requestId}] ===== REQUEST FAILED ====\n`);
 
     return res.status(500).json({
       error: 'Failed to fetch and update banlist',
