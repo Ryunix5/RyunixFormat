@@ -52,16 +52,18 @@ interface YGOProdeckBanlistCard {
 // Fetches cards in batches and extracts their TCG banlist status
 async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatus }>> {
   const bannedCards: Array<{ name: string; status: BanStatus }> = [];
-  const batchSize = 500; // Further reduced to 500 for faster responses and higher success rate
+  const batchSize = 250; // Very small batches for fast response
   let offset = 0;
   let totalFetched = 0;
-  const maxCards = 50000;
-  const maxRetries = 3;
-  const requestTimeoutMs = 15000; // 15 seconds per batch (even more aggressive)
+  const maxBatches = 8; // Fetch up to 8 batches (2000 cards) then stop
+  const maxRetries = 2; // Reduce retries
+  const requestTimeoutMs = 12000; // 12 seconds per batch
 
   console.log('[BANLIST] Starting TCG banlist fetch from YGOPRODECK...');
+  console.log(`[BANLIST] Strategy: Fetch ${maxBatches} batches of ${batchSize} cards (${maxBatches * batchSize} total max)`);
   
-  while (totalFetched < maxCards) {
+  let batchesAttempted = 0;
+  while (batchesAttempted < maxBatches) {
     let retryCount = 0;
     let batchSuccess = false;
     let lastError: Error | null = null;
@@ -69,7 +71,7 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
     while (retryCount < maxRetries && !batchSuccess) {
       try {
         const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?num=${batchSize}&offset=${offset}`;
-        const batchNum = Math.floor(offset / batchSize) + 1;
+        const batchNum = batchesAttempted + 1;
         
         if (retryCount > 0) {
           console.log(`[BANLIST] Batch ${batchNum} - Retry ${retryCount}/${maxRetries - 1}`);
@@ -98,7 +100,7 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
           lastError = new Error(`Fetch failed: ${fetchErrorMsg}`);
           retryCount++;
           if (retryCount < maxRetries) {
-            await new Promise(r => setTimeout(r, 2000 * retryCount));
+            await new Promise(r => setTimeout(r, 1000 * retryCount));
           }
           continue;
         }
@@ -113,7 +115,7 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
           lastError = new Error(`HTTP ${response.status}`);
           retryCount++;
           if (retryCount < maxRetries) {
-            await new Promise(r => setTimeout(r, 2000 * retryCount));
+            await new Promise(r => setTimeout(r, 1000 * retryCount));
           }
           continue;
         }
@@ -139,7 +141,7 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
           lastError = new Error(`Invalid JSON`);
           retryCount++;
           if (retryCount < maxRetries) {
-            await new Promise(r => setTimeout(r, 2000 * retryCount));
+            await new Promise(r => setTimeout(r, 1000 * retryCount));
           }
           continue;
         }
@@ -189,7 +191,7 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
         batchSuccess = true;
 
       } catch (error) {
-        const batchNum = Math.floor(offset / batchSize) + 1;
+        const batchNum = batchesAttempted + 1;
         const errorMsg = error instanceof Error ? error.message : String(error);
         console.error(`[BANLIST] Batch ${batchNum} - Unexpected error: ${errorMsg}`);
         lastError = error instanceof Error ? error : new Error(errorMsg);
@@ -198,14 +200,16 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
     }
 
     if (!batchSuccess) {
-      const batchNum = Math.floor(offset / batchSize) + 1;
+      const batchNum = batchesAttempted + 1;
       console.error(`[BANLIST] Batch ${batchNum} - Failed after ${maxRetries} attempts`);
       if (bannedCards.length === 0) {
         throw lastError || new Error('Failed to fetch any cards from YGOPRODECK');
       }
-      console.log('[BANLIST] Returning partial results');
+      console.log(`[BANLIST] Returning ${bannedCards.length} cards fetched from previous batches`);
       break;
     }
+    
+    batchesAttempted++;
   }
 
   console.log(`[BANLIST] ✅ Fetch complete: ${bannedCards.length} banned cards from ${totalFetched} total`);
@@ -233,7 +237,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const requestId = Math.random().toString(36).substring(7);
   const startTime = Date.now();
-  const overallTimeoutMs = 50000; // 50 second overall limit (Vercel Pro: 60s)
+  const overallTimeoutMs = 35000; // 35 second overall limit (reduced from 50s - should complete in ~20-25s with 8 batches)
   const testMode = req.query.test === 'true' || req.body?.test === true; // Allow testing without DB save
   
   console.log(`\n[API-${requestId}] ===== FETCH BANLIST REQUEST =====`);
@@ -274,21 +278,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const timeRemaining = overallTimeoutMs - (Date.now() - startTime);
       console.log(`[API-${requestId}] Time remaining: ${timeRemaining}ms`);
       
-      if (timeRemaining < 30000) {
-        throw new Error(`Not enough time to complete request (${timeRemaining}ms remaining)`);
+      if (timeRemaining < 8000) {
+        // Not enough time even for one batch
+        throw new Error(`Not enough time to complete request (${timeRemaining}ms remaining, need ~12s per batch)`);
       }
       
       const fetchPromise = fetchTCGBanlist();
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error(`Overall request timeout after ${overallTimeoutMs}ms`)),
-          timeRemaining
+          () => reject(new Error(`Overall request timeout after ${timeRemaining}ms`)),
+          Math.max(5000, timeRemaining - 2000) // Leave 2s buffer for DB save
         )
       );
       
       console.log(`[API-${requestId}] Racing fetch against ${timeRemaining}ms timeout...`);
       bannedCards = await Promise.race([fetchPromise, timeoutPromise]);
-      console.log(`[API-${requestId}] Fetch race completed successfully`);
+      console.log(`[API-${requestId}] ✅ Fetch race completed, got ${bannedCards.length} cards`);
     } catch (fetchError) {
       const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
       const stack = fetchError instanceof Error ? fetchError.stack : '';
