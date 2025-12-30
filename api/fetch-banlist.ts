@@ -52,11 +52,12 @@ interface YGOProdeckBanlistCard {
 // Fetches cards in batches and extracts their TCG banlist status
 async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatus }>> {
   const bannedCards: Array<{ name: string; status: BanStatus }> = [];
-  const batchSize = 2500;
+  const batchSize = 1000; // Reduced from 2500 for faster responses
   let offset = 0;
   let totalFetched = 0;
   const maxCards = 50000;
   const maxRetries = 3;
+  const requestTimeoutMs = 25000; // 25 seconds per batch (Vercel: 30-60s timeout)
 
   console.log('[BANLIST] Starting TCG banlist fetch from YGOPRODECK...');
   
@@ -78,9 +79,9 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
 
         const abortController = new AbortController();
         const timeoutHandle = setTimeout(() => {
-          console.log(`[BANLIST] Batch ${batchNum} - Timeout after 45s, aborting`);
+          console.log(`[BANLIST] Batch ${batchNum} - Timeout after ${requestTimeoutMs}ms, aborting`);
           abortController.abort();
-        }, 45000);
+        }, requestTimeoutMs);
 
         let response: Response;
         try {
@@ -231,6 +232,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const requestId = Math.random().toString(36).substring(7);
+  const startTime = Date.now();
+  const overallTimeoutMs = 50000; // 50 second overall limit (Vercel Pro: 60s)
+  
   console.log(`\n[API-${requestId}] ===== FETCH BANLIST REQUEST =====`);
   console.log(`[API-${requestId}] Method: ${req.method}`);
   console.log(`[API-${requestId}] Timestamp: ${new Date().toISOString()}`);
@@ -253,8 +257,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log(`[API-${requestId}] Starting TCG banlist fetch...`);
 
-    // Fetch latest TCG banlist
-    const bannedCards = await fetchTCGBanlist();
+    // Fetch latest TCG banlist with timeout protection
+    let bannedCards;
+    try {
+      const timeRemaining = overallTimeoutMs - (Date.now() - startTime);
+      if (timeRemaining < 30000) {
+        throw new Error(`Not enough time to complete request (${timeRemaining}ms remaining)`);
+      }
+      
+      bannedCards = await Promise.race([
+        fetchTCGBanlist(),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`Overall request timeout after ${overallTimeoutMs}ms`)),
+            timeRemaining
+          )
+        ),
+      ]);
+    } catch (fetchError) {
+      const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+      console.error(`[API-${requestId}] ❌ Failed to fetch banlist: ${msg}`);
+      return res.status(500).json({
+        error: 'Failed to fetch TCG banlist',
+        details: msg,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    
     console.log(`[API-${requestId}] ✅ Fetched ${bannedCards.length} banned cards`);
 
     // Prepare records for database
@@ -276,7 +305,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       throw new Error(`Database error: ${error.message}`);
     }
 
-    console.log(`[API-${requestId}] ✅ Successfully saved to database`);
+    const elapsed = Date.now() - startTime;
+    console.log(`[API-${requestId}] ✅ Successfully saved to database (${elapsed}ms)`);
     console.log(`[API-${requestId}] ===== REQUEST COMPLETE ====\n`);
 
     return res.status(200).json({
@@ -284,6 +314,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: `Updated banlist with ${bannedCards.length} cards`,
       cardsUpdated: bannedCards.length,
       timestamp: new Date().toISOString(),
+      duration_ms: elapsed,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
