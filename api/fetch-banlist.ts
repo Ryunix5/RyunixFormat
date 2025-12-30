@@ -48,141 +48,122 @@ interface YGOProdeckBanlistCard {
   card_prices?: Array<{ cardmarket_price: string; tcgplayer_price: string; ebay_price: string; amazon_price: string; coolstuffinc_price: string }>;
 }
 
-// Fetch official Konami TCG banlist from YGOProDeck
-// YGOProDeck maintains the official banlist data
+// Fetch official Konami TCG banlist from YGOProDeck cardinfo
+// Extract cards that have official TCG ban status
 async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatus }>> {
   const bannedCards: Array<{ name: string; status: BanStatus }> = [];
   
-  console.log('[BANLIST] Fetching official Konami TCG banlist from YGOProDeck...');
+  console.log('[BANLIST] Fetching official Konami TCG banlist from YGOProDeck cardinfo...');
   
-  const requestTimeoutMs = 10000; // 10 seconds for banlist fetch
-  const maxRetries = 2;
+  const batchSize = 5000; // Larger batch to get more cards in one request
+  let offset = 0;
+  const maxBatches = 3; // Fetch 3 batches (15,000 cards) - should get all banned cards
+  const requestTimeoutMs = 15000; // 15 seconds per batch
   
-  // Try multiple possible endpoints
-  const endpoints = [
-    'https://db.ygoprodeck.com/api/v7/bans.php',
-    'https://db.ygoprodeck.com/api/v7/banlist',
-    'https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist=1',
-  ];
-  
-  for (const baseUrl of endpoints) {
-    for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
+  for (let batchNum = 0; batchNum < maxBatches; batchNum++) {
+    try {
+      const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?num=${batchSize}&offset=${offset}`;
+      
+      console.log(`[BANLIST] Batch ${batchNum + 1}/${maxBatches} - Fetching from offset ${offset}`);
+
+      const abortController = new AbortController();
+      const timeoutHandle = setTimeout(() => {
+        console.log(`[BANLIST] Batch ${batchNum + 1} - Timeout after ${requestTimeoutMs}ms, aborting`);
+        abortController.abort();
+      }, requestTimeoutMs);
+
+      let response: Response;
       try {
-        if (retryCount > 0) {
-          console.log(`[BANLIST] Retry ${retryCount}/${maxRetries - 1} with ${baseUrl}`);
-        } else {
-          console.log(`[BANLIST] Trying endpoint: ${baseUrl}`);
-        }
-
-        const abortController = new AbortController();
-        const timeoutHandle = setTimeout(() => {
-          console.log(`[BANLIST] Timeout after ${requestTimeoutMs}ms, aborting`);
-          abortController.abort();
-        }, requestTimeoutMs);
-
-        let response: Response;
-        try {
-          response = await fetch(baseUrl, {
-            signal: abortController.signal,
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            },
-          });
-        } catch (fetchError) {
-          clearTimeout(timeoutHandle);
-          const fetchErrorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-          console.error(`[BANLIST] Fetch failed: ${fetchErrorMsg}`);
-          continue;
-        }
-
+        response = await fetch(url, {
+          signal: abortController.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+        });
+      } catch (fetchError) {
         clearTimeout(timeoutHandle);
-        console.log(`[BANLIST] Response status: ${response.status}`);
+        const fetchErrorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+        console.error(`[BANLIST] Batch ${batchNum + 1} - Fetch failed: ${fetchErrorMsg}`);
+        continue;
+      }
 
-        if (!response.ok) {
-          const errorBody = await response.text().catch(() => '');
-          console.error(`[BANLIST] HTTP ${response.status}: ${errorBody.substring(0, 200)}`);
-          continue;
-        }
+      clearTimeout(timeoutHandle);
+      console.log(`[BANLIST] Batch ${batchNum + 1} - Response status: ${response.status}`);
 
-        const responseText = await response.text();
-        if (!responseText || responseText.trim().length === 0) {
-          console.error(`[BANLIST] Empty response from ${baseUrl}`);
-          continue;
-        }
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => '');
+        console.error(`[BANLIST] Batch ${batchNum + 1} - HTTP ${response.status}`);
+        continue;
+      }
 
-        console.log(`[BANLIST] Response size: ${responseText.length} bytes, first 500 chars: ${responseText.substring(0, 500)}`);
+      const responseText = await response.text();
+      if (!responseText || responseText.trim().length === 0) {
+        console.log(`[BANLIST] Batch ${batchNum + 1} - Empty response, stopping`);
+        break;
+      }
 
-        let data;
-        try {
-          data = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error(`[BANLIST] JSON parse failed`);
-          continue;
-        }
+      console.log(`[BANLIST] Batch ${batchNum + 1} - Response size: ${responseText.length} bytes`);
 
-        if (!data) {
-          console.error(`[BANLIST] No data in response`);
-          continue;
-        }
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error(`[BANLIST] Batch ${batchNum + 1} - JSON parse failed`);
+        continue;
+      }
 
-        // Handle different response formats
-        let forbidden: any[] = [];
-        let limited: any[] = [];
-        let semiLimited: any[] = [];
+      if (!data || !Array.isArray(data.data)) {
+        console.error(`[BANLIST] Batch ${batchNum + 1} - No data array in response`);
+        continue;
+      }
 
-        // Format 1: { forbidden: [...], limited: [...], semi_limited: [...] }
-        if (data.forbidden || data.limited || data.semi_limited) {
-          forbidden = Array.isArray(data.forbidden) ? data.forbidden : [];
-          limited = Array.isArray(data.limited) ? data.limited : [];
-          semiLimited = Array.isArray(data.semi_limited) ? data.semi_limited : [];
-        }
-        // Format 2: { banlist: { forbidden: [...], ... } }
-        else if (data.banlist) {
-          forbidden = Array.isArray(data.banlist.forbidden) ? data.banlist.forbidden : [];
-          limited = Array.isArray(data.banlist.limited) ? data.banlist.limited : [];
-          semiLimited = Array.isArray(data.banlist.semi_limited) ? data.banlist.semi_limited : [];
-        }
-        // Format 3: Array of cards with ban status
-        else if (Array.isArray(data)) {
-          const response = data as any[];
-          for (const item of response) {
-            if (item.banlist_info) {
-              const banStatus = item.banlist_info.ban_tcg;
-              if (banStatus === 'Forbidden') forbidden.push(item);
-              else if (banStatus === 'Limited') limited.push(item);
-              else if (banStatus === 'Semi-Limited') semiLimited.push(item);
-            }
+      const cardsInBatch = data.data.length;
+      console.log(`[BANLIST] Batch ${batchNum + 1} - Received ${cardsInBatch} cards`);
+
+      // Extract cards with official Konami TCG ban status
+      let batchBannedCount = 0;
+      for (const card of data.data) {
+        if (card.banlist_info?.ban_tcg) {
+          const banStatus = card.banlist_info.ban_tcg;
+          let status: BanStatus = 'unlimited';
+          
+          if (banStatus === 'Forbidden') {
+            status = 'forbidden';
+          } else if (banStatus === 'Limited') {
+            status = 'limited';
+          } else if (banStatus === 'Semi-Limited') {
+            status = 'semi-limited';
+          }
+          
+          if (status !== 'unlimited') {
+            bannedCards.push({ name: card.name, status });
+            batchBannedCount++;
           }
         }
-
-        if (forbidden.length === 0 && limited.length === 0 && semiLimited.length === 0) {
-          console.error(`[BANLIST] No banned cards found in response`);
-          continue;
-        }
-
-        console.log(`[BANLIST] ✅ Forbidden: ${forbidden.length}, Limited: ${limited.length}, Semi-Limited: ${semiLimited.length}`);
-
-        for (const card of forbidden) {
-          bannedCards.push({ name: card.name || card.card_name, status: 'forbidden' });
-        }
-        for (const card of limited) {
-          bannedCards.push({ name: card.name || card.card_name, status: 'limited' });
-        }
-        for (const card of semiLimited) {
-          bannedCards.push({ name: card.name || card.card_name, status: 'semi-limited' });
-        }
-
-        console.log(`[BANLIST] ✅ Fetched official Konami banlist: ${bannedCards.length} banned cards`);
-        return bannedCards;
-
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[BANLIST] Error with ${baseUrl}: ${errorMsg}`);
       }
+
+      console.log(`[BANLIST] Batch ${batchNum + 1} - Found ${batchBannedCount} banned cards (total: ${bannedCards.length})`);
+
+      // If this batch was smaller than requested, we've reached the end
+      if (cardsInBatch < batchSize) {
+        console.log('[BANLIST] Reached end of database');
+        break;
+      }
+
+      offset += batchSize;
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[BANLIST] Batch ${batchNum + 1} - Error: ${errorMsg}`);
     }
   }
 
-  throw new Error('Failed to fetch banlist from all endpoints');
+  if (bannedCards.length === 0) {
+    throw new Error('Failed to fetch any banned cards from YGOPRODECK');
+  }
+
+  console.log(`[BANLIST] ✅ Fetch complete: ${bannedCards.length} banned cards`);
+  return bannedCards;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -206,7 +187,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const requestId = Math.random().toString(36).substring(7);
   const startTime = Date.now();
-  const overallTimeoutMs = 20000; // 20 second overall limit (banlist endpoint is fast)
+  const overallTimeoutMs = 60000; // 60 second overall limit (3 batches × 15s + DB save)
   const testMode = req.query.test === 'true' || req.body?.test === true; // Allow testing without DB save
   
   console.log(`\n[API-${requestId}] ===== FETCH BANLIST REQUEST =====`);
