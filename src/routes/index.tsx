@@ -58,7 +58,7 @@ function App() {
           // Load archetype modifications
           if (mods.archetypes && typeof mods.archetypes === 'object') {
             Object.assign(cardModifications, mods.archetypes);
-            console.debug('Loaded archetype modifications at app startup', { count: Object.keys(mods.archetypes).length });
+            console.debug('Loaded archetype modifications at app startup', { count: Object.keys(mods.archetypes).length, data: mods.archetypes });
           }
           // Load custom staples
           if (Array.isArray(mods.customStaples)) {
@@ -72,8 +72,9 @@ function App() {
             mods.removedStaples.forEach((name: string) => removedStaples.add(name));
             console.debug('Loaded removed staples at app startup', { count: mods.removedStaples.length });
           }
-          // Notify components to re-render with loaded data
-          notifyModificationChange();
+          // Notify components to re-render with loaded data (but don't trigger persist)
+          modificationVersion++;
+          modificationListeners.forEach(listener => listener());
         }
       } catch (e) {
         console.warn('Failed to load card modifications at app startup', e);
@@ -88,7 +89,8 @@ function App() {
         Object.keys(banlist).forEach(k => delete banlist[k]);
         Object.assign(banlist, loadedBanlist);
         console.debug('Loaded banlist at app startup', { count: Object.keys(loadedBanlist).length });
-        notifyBanlistChange();
+        banlistVersion++;
+        banlistListeners.forEach(listener => listener());
       } catch (e) {
         console.warn('Failed to load banlist at app startup', e);
       }
