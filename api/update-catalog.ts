@@ -1,4 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -12,83 +13,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const githubToken = process.env.GITHUB_TOKEN;
-    const owner = 'Ryunix5';
-    const repo = 'RyunixFormat';
-    const filePath = 'src/data/yugioh-catalog.ts';
-    const branch = 'main';
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-    if (!githubToken) {
-      console.warn('GITHUB_TOKEN not configured - skipping file update');
-      return res.status(200).json({ success: true, message: 'Database updated (file sync disabled)' });
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(500).json({ error: 'Database not configured' });
     }
 
-    // Get current file content and SHA
-    const getFileResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`,
-      {
-        headers: {
-          Authorization: `Bearer ${githubToken}`,
-          Accept: 'application/vnd.github.v3+json',
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Update the archetype_modifications table
+    const { data, error } = await supabase
+      .from('archetype_modifications')
+      .upsert(
+        {
+          archetype_name: archetypeName,
+          rating: rating,
+          price: price,
+          updated_at: new Date().toISOString(),
         },
-      }
-    );
+        {
+          onConflict: 'archetype_name',
+        }
+      )
+      .select();
 
-    if (!getFileResponse.ok) {
-      throw new Error(`GitHub API error: ${getFileResponse.statusText}`);
+    if (error) {
+      throw new Error(`Database error: ${error.message}`);
     }
 
-    const fileData = await getFileResponse.json() as any;
-    const currentContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
-    const fileSha = fileData.sha;
-
-    // Update the archetype rating/price
-    const escapedName = archetypeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const pattern = new RegExp(
-      `(\\{\\s*name:\\s*"${escapedName}"\\s*,\\s*rating:\\s*)"[^"]*"(\\s*,\\s*price:\\s*)\\d+`,
-      'g'
-    );
-
-    const updatedContent = currentContent.replace(pattern, `$1"${rating}"$2${price}`);
-
-    if (updatedContent === currentContent) {
-      return res.status(200).json({ success: true, message: 'No changes needed' });
-    }
-
-    // Commit updated file back to GitHub
-    const updateResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${githubToken}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: `Update ${archetypeName} rating to ${rating}`,
-          content: Buffer.from(updatedContent).toString('base64'),
-          sha: fileSha,
-          branch: branch,
-        }),
-      }
-    );
-
-    if (!updateResponse.ok) {
-      const error = await updateResponse.json();
-      throw new Error(`Failed to update file: ${JSON.stringify(error)}`);
-    }
-
-    console.log(`✅ Updated ${archetypeName} in yugioh-catalog.ts via GitHub API`);
-    return res.status(200).json({ 
-      success: true, 
-      message: `Updated ${archetypeName} to ${rating} (${price} coins)` 
+    console.log(`✅ Updated ${archetypeName} in database: rating=${rating}, price=${price}`);
+    return res.status(200).json({
+      success: true,
+      message: `Updated ${archetypeName} to ${rating} (${price} coins)`,
+      data: data,
     });
   } catch (error) {
     console.error('Catalog update error:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Failed to update catalog',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }
+

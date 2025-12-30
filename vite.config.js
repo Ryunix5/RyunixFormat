@@ -4,7 +4,6 @@ import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
-import { catalogUpdatePlugin } from "./config/vite/catalog-update-plugin.mjs";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -21,7 +20,6 @@ export default defineConfig({
 		}),
 		svgr(),
 		tailwindcss(),
-		catalogUpdatePlugin(),
 	],
 	resolve: {
 		alias: {
