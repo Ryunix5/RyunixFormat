@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Coins, ShoppingCart, History, User, LogOut, Users, Gift, KeyRound, BarChart3, Save, List, Grid3X3, LayoutGrid, X, Edit3, ChevronDown, ChevronUp, Eye, Search, Plus, Image, Package, Layers, ShoppingBag, Trash2, Star } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Coins, ShoppingCart, History, User, LogOut, Users, Gift, KeyRound, BarChart3, Save, List, Grid3X3, LayoutGrid, X, Edit3, ChevronDown, ChevronUp, Eye, Search, Plus, Image, Package, Layers, ShoppingBag, Trash2, Star, Info, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { CardModificationsORM } from "@/sdk/database/orm/orm_card_modifications";
 import { PurchaseORM, type PurchaseModel, PurchaseItemType } from "@/sdk/database/orm/orm_purchase";
@@ -145,7 +146,18 @@ function App() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900">
-        <div className="text-lg font-semibold text-amber-400 animate-pulse">Loading...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex gap-2">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="size-3 rounded-full bg-amber-500 animate-bounce"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+          <div className="text-lg font-semibold text-amber-400">Loading...</div>
+        </div>
       </div>
     );
   }
@@ -342,7 +354,10 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
   const [category, setCategory] = useState<"decks" | "staples">("decks");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRating, setFilterRating] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"name" | "price-asc" | "price-desc" | "rating">("name");
   const [viewMode, setViewMode] = useState<"list" | "compact" | "grid">("grid");
+  const [confirmPurchase, setConfirmPurchase] = useState<CatalogItem | null>(null);
+  const [selectedCard, setSelectedCard] = useState<ArchetypeCard | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -402,14 +417,39 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
   const items = category === "decks" ? ARCHETYPE_DECKS : getEffectiveStaples();
   
   // Memoize filtered items for performance
-  const filteredItems = useMemo(() => items.filter((item) => {
-    const displayName = cardModifications[item.name]?.displayName ?? item.name;
-    const matchesSearch = item.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                          displayName.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-    const currentRating = cardModifications[item.name]?.rating ?? item.rating;
-    const matchesRating = filterRating === "all" || currentRating === filterRating;
-    return matchesSearch && matchesRating;
-  }), [items, debouncedSearchTerm, filterRating]);
+  const filteredItems = useMemo(() => {
+    const filtered = items.filter((item) => {
+      const displayName = cardModifications[item.name]?.displayName ?? item.name;
+      const matchesSearch = item.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                            displayName.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+      const currentRating = cardModifications[item.name]?.rating ?? item.rating;
+      const matchesRating = filterRating === "all" || currentRating === filterRating;
+      return matchesSearch && matchesRating;
+    });
+
+    // Apply sorting
+    return filtered.sort((a, b) => {
+      if (sortBy === "name") {
+        const nameA = (cardModifications[a.name]?.displayName ?? a.name).toLowerCase();
+        const nameB = (cardModifications[b.name]?.displayName ?? b.name).toLowerCase();
+        return nameA.localeCompare(nameB);
+      } else if (sortBy === "price-asc") {
+        const priceA = cardModifications[a.name]?.price ?? a.price;
+        const priceB = cardModifications[b.name]?.price ?? b.price;
+        return priceA - priceB;
+      } else if (sortBy === "price-desc") {
+        const priceA = cardModifications[a.name]?.price ?? a.price;
+        const priceB = cardModifications[b.name]?.price ?? b.price;
+        return priceB - priceA;
+      } else if (sortBy === "rating") {
+        const ratingOrder = ["S+", "S", "A", "B", "C", "D", "F"];
+        const ratingA = cardModifications[a.name]?.rating ?? a.rating;
+        const ratingB = cardModifications[b.name]?.rating ?? b.rating;
+        return ratingOrder.indexOf(ratingA) - ratingOrder.indexOf(ratingB);
+      }
+      return 0;
+    });
+  }, [items, debouncedSearchTerm, filterRating, sortBy]);
   
   // Calculate pagination
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
@@ -730,6 +770,28 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
     }
   }
 
+  // Get rating description for tooltip
+  function getRatingDescription(rating: string) {
+    switch (rating) {
+      case "S+":
+        return "Top tier - Tournament dominant";
+      case "S":
+        return "Tier 1 - Highly competitive";
+      case "A":
+        return "Tier 2 - Strong and viable";
+      case "B":
+        return "Tier 3 - Playable competitively";
+      case "C":
+        return "Casual - Fun but less competitive";
+      case "D":
+        return "Below average - Needs support";
+      case "F":
+        return "Poor - Not recommended";
+      default:
+        return "Not rated";
+    }
+  }
+
   return (
     <div className="space-y-6">
       {error && (
@@ -774,6 +836,18 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
               <SelectItem value="C" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">C</SelectItem>
               <SelectItem value="D" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">D</SelectItem>
               <SelectItem value="F" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">F</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(val) => setSortBy(val as any)}>
+            <SelectTrigger className="w-32 bg-slate-700 border-slate-600 text-slate-100 focus:border-amber-500">
+              <ArrowUpDown className="size-4 mr-2" />
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectItem value="name" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Name</SelectItem>
+              <SelectItem value="price-asc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Price ↑</SelectItem>
+              <SelectItem value="price-desc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Price ↓</SelectItem>
+              <SelectItem value="rating" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Rating</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex items-center gap-0.5 border border-slate-600 rounded-md p-0.5 bg-slate-800">
@@ -864,12 +938,21 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                     <span className="font-semibold text-slate-100 truncate">{displayName}</span>
                   )}
                 </div>
-                <Badge className={`font-bold shrink-0 ${getRatingStyle(rating)}`}>{rating}</Badge>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge className={`font-bold shrink-0 cursor-help ${getRatingStyle(rating)}`}>{rating}</Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{getRatingDescription(rating)}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <div className="flex items-center gap-1.5 bg-amber-900 px-2 py-1 rounded border border-amber-700">
                   <Coins className="size-3.5 text-amber-400" />
                   <span className="font-bold text-amber-300 text-sm">{price}</span>
                 </div>
-                <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50 text-xs px-3">
+                <Button size="sm" onClick={() => setConfirmPurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50 text-xs px-3">
                   {purchasing === item.name ? "..." : "Buy"}
                 </Button>
               </div>
@@ -896,7 +979,16 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                       <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm font-bold">?</div>
                     )}
                   </div>
-                  <Badge className={`font-bold text-xs ${getRatingStyle(rating)}`}>{rating}</Badge>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge className={`font-bold text-xs cursor-help ${getRatingStyle(rating)}`}>{rating}</Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{getRatingDescription(rating)}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 {category === "decks" ? (
                   <span className="font-semibold text-sm text-slate-100 truncate cursor-pointer hover:text-amber-300 transition-colors" onClick={() => handleArchetypeClick(item.name)} title={displayName}>
@@ -910,7 +1002,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                     <Coins className="size-3" />
                     <span className="text-sm font-bold">{price}</span>
                   </div>
-                  <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50 text-xs h-7 px-2">
+                  <Button size="sm" onClick={() => setConfirmPurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50 text-xs h-7 px-2">
                     {purchasing === item.name ? "..." : "Buy"}
                   </Button>
                 </div>
@@ -949,7 +1041,16 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                         ) : (
                           <CardTitle className="text-lg font-bold text-slate-100 truncate">{displayName}</CardTitle>
                         )}
-                        <Badge className={`font-bold shrink-0 ${getRatingStyle(rating)}`}>{rating}</Badge>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge className={`font-bold shrink-0 cursor-help ${getRatingStyle(rating)}`}>{rating}</Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{getRatingDescription(rating)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
                   </div>
@@ -960,7 +1061,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                       <Coins className="size-4 text-amber-400" />
                       <span className="font-bold text-amber-300">{price}</span>
                     </div>
-                    <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50">
+                    <Button size="sm" onClick={() => setConfirmPurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50">
                       {purchasing === item.name ? "..." : "Buy"}
                     </Button>
                   </div>
@@ -1046,7 +1147,12 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
             {!loadingCards && archetypeCards.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {archetypeCards.map((card) => (
-                  <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors">
+                  <div 
+                    key={card.id} 
+                    className="flex flex-col p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+                    onClick={() => setSelectedCard(card)}
+                    title="Click to view details"
+                  >
                     {card.card_images?.[0]?.image_url_small && (
                       <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
                         <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
@@ -1062,6 +1168,147 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Purchase Confirmation Dialog */}
+      <Dialog open={confirmPurchase !== null} onOpenChange={(open) => { if (!open) setConfirmPurchase(null); }}>
+        <DialogContent className="bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-amber-400">Confirm Purchase</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Are you sure you want to purchase this item?
+            </DialogDescription>
+          </DialogHeader>
+          {confirmPurchase && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-slate-800 rounded-lg border border-slate-700">
+                <div className="shrink-0 size-16 rounded overflow-hidden border border-slate-600 bg-slate-700">
+                  {getModifiedImage(confirmPurchase) ? (
+                    <img 
+                      src={getModifiedImage(confirmPurchase)} 
+                      alt={getDisplayName(confirmPurchase)} 
+                      className="w-full h-full object-cover" 
+                      onError={handleImageError} 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-500 text-2xl font-bold">?</div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-slate-100">{getDisplayName(confirmPurchase)}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className={`font-bold text-xs ${getRatingStyle(getModifiedRating(confirmPurchase))}`}>
+                      {getModifiedRating(confirmPurchase)}
+                    </Badge>
+                    <span className="text-sm text-slate-400">{category === "decks" ? "Archetype Deck" : "Staple Card"}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-slate-800 rounded-lg border border-slate-700">
+                <div>
+                  <p className="text-sm text-slate-400">Cost</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Coins className="size-5 text-amber-400" />
+                    <span className="text-xl font-bold text-amber-400">{getModifiedPrice(confirmPurchase)}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">Your Balance</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Coins className="size-5 text-amber-400" />
+                    <span className="text-xl font-bold text-slate-100">{user.coin}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setConfirmPurchase(null)} 
+                  className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    handlePurchase(confirmPurchase);
+                    setConfirmPurchase(null);
+                  }} 
+                  disabled={user.coin < getModifiedPrice(confirmPurchase)}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold"
+                >
+                  Confirm Purchase
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Card Details Modal */}
+      <Dialog open={selectedCard !== null} onOpenChange={(open) => { if (!open) setSelectedCard(null); }}>
+        <DialogContent className="max-w-2xl bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-amber-400">{selectedCard?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedCard && (
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <div className="shrink-0">
+                  <img 
+                    src={selectedCard.card_images[0]?.image_url_small || selectedCard.card_images[0]?.image_url} 
+                    alt={selectedCard.name}
+                    className="w-48 h-auto rounded-lg border border-slate-600"
+                    onError={handleImageError}
+                  />
+                </div>
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <p className="text-sm text-slate-400">Type</p>
+                    <p className="text-slate-100 font-semibold">{selectedCard.type}</p>
+                  </div>
+                  {selectedCard.race && (
+                    <div>
+                      <p className="text-sm text-slate-400">Race/Type</p>
+                      <p className="text-slate-100 font-semibold">{selectedCard.race}</p>
+                    </div>
+                  )}
+                  {selectedCard.attribute && (
+                    <div>
+                      <p className="text-sm text-slate-400">Attribute</p>
+                      <p className="text-slate-100 font-semibold">{selectedCard.attribute}</p>
+                    </div>
+                  )}
+                  {selectedCard.level !== undefined && (
+                    <div>
+                      <p className="text-sm text-slate-400">Level/Rank</p>
+                      <p className="text-slate-100 font-semibold">{selectedCard.level}</p>
+                    </div>
+                  )}
+                  {selectedCard.atk !== undefined && (
+                    <div className="flex gap-4">
+                      <div>
+                        <p className="text-sm text-slate-400">ATK</p>
+                        <p className="text-slate-100 font-semibold">{selectedCard.atk}</p>
+                      </div>
+                      {selectedCard.def !== undefined && (
+                        <div>
+                          <p className="text-sm text-slate-400">DEF</p>
+                          <p className="text-slate-100 font-semibold">{selectedCard.def}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400 mb-2">Description</p>
+                <p className="text-slate-200 leading-relaxed bg-slate-800 p-3 rounded-lg border border-slate-700">
+                  {selectedCard.desc}
+                </p>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
