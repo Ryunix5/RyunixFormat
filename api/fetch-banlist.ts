@@ -48,172 +48,121 @@ interface YGOProdeckBanlistCard {
   card_prices?: Array<{ cardmarket_price: string; tcgplayer_price: string; ebay_price: string; amazon_price: string; coolstuffinc_price: string }>;
 }
 
-// Parse banlist from YGOPRODECK
-// Fetches cards in batches and extracts their TCG banlist status
+// Fetch official Konami TCG banlist from YGOProDeck
+// YGOProDeck maintains the official banlist data
 async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatus }>> {
   const bannedCards: Array<{ name: string; status: BanStatus }> = [];
-  const batchSize = 250; // Very small batches for fast response
-  let offset = 0;
-  let totalFetched = 0;
-  const maxBatches = 8; // Fetch up to 8 batches (2000 cards) then stop
-  const maxRetries = 2; // Reduce retries
-  const requestTimeoutMs = 12000; // 12 seconds per batch
-
-  console.log('[BANLIST] Starting TCG banlist fetch from YGOPRODECK...');
-  console.log(`[BANLIST] Strategy: Fetch ${maxBatches} batches of ${batchSize} cards (${maxBatches * batchSize} total max)`);
   
-  let batchesAttempted = 0;
-  while (batchesAttempted < maxBatches) {
-    let retryCount = 0;
-    let batchSuccess = false;
-    let lastError: Error | null = null;
+  console.log('[BANLIST] Fetching official Konami TCG banlist from YGOProDeck...');
+  
+  const requestTimeoutMs = 10000; // 10 seconds for banlist fetch
+  const maxRetries = 2;
+  
+  for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
+    try {
+      // YGOProDeck banlist endpoint returns the official Konami banlist
+      const url = 'https://db.ygoprodeck.com/api/v7/banlist.php';
+      
+      if (retryCount > 0) {
+        console.log(`[BANLIST] Retry ${retryCount}/${maxRetries - 1}`);
+      } else {
+        console.log(`[BANLIST] Fetching from ${url}`);
+      }
 
-    while (retryCount < maxRetries && !batchSuccess) {
+      const abortController = new AbortController();
+      const timeoutHandle = setTimeout(() => {
+        console.log(`[BANLIST] Timeout after ${requestTimeoutMs}ms, aborting`);
+        abortController.abort();
+      }, requestTimeoutMs);
+
+      let response: Response;
       try {
-        const url = `https://db.ygoprodeck.com/api/v7/cardinfo.php?num=${batchSize}&offset=${offset}`;
-        const batchNum = batchesAttempted + 1;
-        
-        if (retryCount > 0) {
-          console.log(`[BANLIST] Batch ${batchNum} - Retry ${retryCount}/${maxRetries - 1}`);
-        } else {
-          console.log(`[BANLIST] Batch ${batchNum} - Fetching ${batchSize} cards from offset ${offset}`);
-        }
-
-        const abortController = new AbortController();
-        const timeoutHandle = setTimeout(() => {
-          console.log(`[BANLIST] Batch ${batchNum} - Timeout after ${requestTimeoutMs}ms, aborting`);
-          abortController.abort();
-        }, requestTimeoutMs);
-
-        let response: Response;
-        try {
-          response = await fetch(url, {
-            signal: abortController.signal,
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            },
-          });
-        } catch (fetchError) {
-          clearTimeout(timeoutHandle);
-          const fetchErrorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-          console.error(`[BANLIST] Batch ${batchNum} - Fetch failed: ${fetchErrorMsg}`);
-          lastError = new Error(`Fetch failed: ${fetchErrorMsg}`);
-          retryCount++;
-          if (retryCount < maxRetries) {
-            await new Promise(r => setTimeout(r, 1000 * retryCount));
-          }
-          continue;
-        }
-
-        clearTimeout(timeoutHandle);
-
-        console.log(`[BANLIST] Batch ${batchNum} - Response status: ${response.status}`);
-
-        if (!response.ok) {
-          const errorBody = await response.text().catch(() => '');
-          console.error(`[BANLIST] Batch ${batchNum} - HTTP ${response.status}: ${errorBody.substring(0, 200)}`);
-          lastError = new Error(`HTTP ${response.status}`);
-          retryCount++;
-          if (retryCount < maxRetries) {
-            await new Promise(r => setTimeout(r, 1000 * retryCount));
-          }
-          continue;
-        }
-
-        const responseText = await response.text().catch((e) => {
-          console.error(`[BANLIST] Batch ${batchNum} - Failed to read response: ${e}`);
-          throw e;
+        response = await fetch(url, {
+          signal: abortController.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
         });
-
-        if (!responseText || responseText.trim().length === 0) {
-          console.log(`[BANLIST] Batch ${batchNum} - Empty response, stopping pagination`);
-          batchSuccess = true;
-          break;
-        }
-
-        console.log(`[BANLIST] Batch ${batchNum} - Response size: ${responseText.length} bytes`);
-
-        let data;
-        try {
-          data = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error(`[BANLIST] Batch ${batchNum} - JSON parse failed. First 200 chars: ${responseText.substring(0, 200)}`);
-          lastError = new Error(`Invalid JSON`);
-          retryCount++;
-          if (retryCount < maxRetries) {
-            await new Promise(r => setTimeout(r, 1000 * retryCount));
-          }
+      } catch (fetchError) {
+        clearTimeout(timeoutHandle);
+        const fetchErrorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+        console.error(`[BANLIST] Fetch failed: ${fetchErrorMsg}`);
+        if (retryCount < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, 1000));
           continue;
         }
+        throw new Error(`Fetch failed: ${fetchErrorMsg}`);
+      }
 
-        if (!data || !Array.isArray(data.data)) {
-          console.error(`[BANLIST] Batch ${batchNum} - Invalid response format (no data array)`);
-          lastError = new Error(`Invalid response format`);
-          retryCount++;
+      clearTimeout(timeoutHandle);
+      console.log(`[BANLIST] Response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => '');
+        console.error(`[BANLIST] HTTP ${response.status}: ${errorBody.substring(0, 200)}`);
+        if (retryCount < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, 1000));
           continue;
         }
+        throw new Error(`HTTP ${response.status}`);
+      }
 
-        const cardsInBatch = data.data.length;
-        console.log(`[BANLIST] Batch ${batchNum} - ✅ Received ${cardsInBatch} cards`);
+      const responseText = await response.text();
+      if (!responseText || responseText.trim().length === 0) {
+        throw new Error('Empty response from banlist endpoint');
+      }
 
-        // Extract banned cards
-        let batchBans = 0;
-        for (const card of data.data) {
-          if (card.banlist_info?.ban_tcg) {
-            const banStatus = card.banlist_info.ban_tcg;
-            let status: BanStatus = 'unlimited';
-            
-            if (banStatus === 'Forbidden') {
-              status = 'forbidden';
-            } else if (banStatus === 'Limited') {
-              status = 'limited';
-            } else if (banStatus === 'Semi-Limited') {
-              status = 'semi-limited';
-            }
-            
-            if (status !== 'unlimited') {
-              bannedCards.push({ name: card.name, status });
-              batchBans++;
-            }
-          }
-        }
-        
-        console.log(`[BANLIST] Batch ${batchNum} - Found ${batchBans} banned cards`);
+      console.log(`[BANLIST] Response size: ${responseText.length} bytes`);
 
-        if (cardsInBatch < batchSize) {
-          console.log('[BANLIST] Reached end of database');
-          batchSuccess = true;
-          break;
-        }
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error(`[BANLIST] JSON parse failed. First 200 chars: ${responseText.substring(0, 200)}`);
+        throw new Error('Invalid JSON response');
+      }
 
-        totalFetched += cardsInBatch;
-        offset += batchSize;
-        batchSuccess = true;
+      // The banlist API returns an object like:
+      // {
+      //   "forbidden": [{ "id": ..., "name": "Card Name" }, ...],
+      //   "limited": [...],
+      //   "semi_limited": [...]
+      // }
+      
+      if (!data) {
+        throw new Error('No data in banlist response');
+      }
 
-      } catch (error) {
-        const batchNum = batchesAttempted + 1;
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[BANLIST] Batch ${batchNum} - Unexpected error: ${errorMsg}`);
-        lastError = error instanceof Error ? error : new Error(errorMsg);
-        retryCount++;
+      // Extract banned cards from official banlist
+      const forbidden = Array.isArray(data.forbidden) ? data.forbidden : [];
+      const limited = Array.isArray(data.limited) ? data.limited : [];
+      const semiLimited = Array.isArray(data.semi_limited) ? data.semi_limited : [];
+
+      console.log(`[BANLIST] Forbidden: ${forbidden.length}, Limited: ${limited.length}, Semi-Limited: ${semiLimited.length}`);
+
+      for (const card of forbidden) {
+        bannedCards.push({ name: card.name, status: 'forbidden' });
+      }
+      for (const card of limited) {
+        bannedCards.push({ name: card.name, status: 'limited' });
+      }
+      for (const card of semiLimited) {
+        bannedCards.push({ name: card.name, status: 'semi-limited' });
+      }
+
+      console.log(`[BANLIST] ✅ Fetched official Konami banlist: ${bannedCards.length} banned cards`);
+      return bannedCards;
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[BANLIST] Error: ${errorMsg}`);
+      if (retryCount === maxRetries - 1) {
+        throw error;
       }
     }
-
-    if (!batchSuccess) {
-      const batchNum = batchesAttempted + 1;
-      console.error(`[BANLIST] Batch ${batchNum} - Failed after ${maxRetries} attempts`);
-      if (bannedCards.length === 0) {
-        throw lastError || new Error('Failed to fetch any cards from YGOPRODECK');
-      }
-      console.log(`[BANLIST] Returning ${bannedCards.length} cards fetched from previous batches`);
-      break;
-    }
-    
-    batchesAttempted++;
   }
 
-  console.log(`[BANLIST] ✅ Fetch complete: ${bannedCards.length} banned cards from ${totalFetched} total`);
-  return bannedCards;
+  throw new Error('Failed to fetch banlist after all retries');
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -237,7 +186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const requestId = Math.random().toString(36).substring(7);
   const startTime = Date.now();
-  const overallTimeoutMs = 35000; // 35 second overall limit (reduced from 50s - should complete in ~20-25s with 8 batches)
+  const overallTimeoutMs = 20000; // 20 second overall limit (banlist endpoint is fast)
   const testMode = req.query.test === 'true' || req.body?.test === true; // Allow testing without DB save
   
   console.log(`\n[API-${requestId}] ===== FETCH BANLIST REQUEST =====`);
@@ -280,7 +229,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       if (timeRemaining < 8000) {
         // Not enough time even for one batch
-        throw new Error(`Not enough time to complete request (${timeRemaining}ms remaining, need ~12s per batch)`);
+        throw new Error(`Not enough time to complete request (${timeRemaining}ms remaining, need ~10s)`);
       }
       
       const fetchPromise = fetchTCGBanlist();
