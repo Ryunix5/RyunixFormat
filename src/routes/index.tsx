@@ -3064,11 +3064,20 @@ function ArchetypeCardsTab() {
   
   // Filter archetypes by search
   const filteredArchetypes = useMemo(() => {
-    return ARCHETYPE_DECKS.filter(a => 
-      a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (cardModifications[a.name]?.displayName?.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [searchQuery]);
+    return ARCHETYPE_DECKS.filter(a => {
+      // Filter out removed archetypes
+      const mod = cardModifications[a.name];
+      if (mod?.is_removed) return false;
+      
+      // If no search query, show all (non-removed)
+      if (!searchQuery.trim()) return true;
+      
+      // Otherwise filter by search
+      const lowerQuery = searchQuery.toLowerCase();
+      return a.name.toLowerCase().includes(lowerQuery) ||
+        (mod?.displayName?.toLowerCase().includes(lowerQuery));
+    });
+  }, [searchQuery, modificationVersion]);
 
   // Load archetype cards from DB first, then API as fallback
   async function loadArchetypeCards(archetypeName: string) {

@@ -134,7 +134,6 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Face Cards", rating: "D", price: 10, imageUrl: getCardImageUrl(14816857) }, // King's Knight
   { name: "F.A.", rating: "C", price: 25, imageUrl: getCardImageUrl(23950192) }, // F.A. Motorhome Transport
   { name: "Fairy Tail", rating: "C", price: 25, imageUrl: getCardImageUrl(86937530) }, // Fairy Tail - Snow
-  { name: "Charmer", rating: "C", price: 25, imageUrl: getCardImageUrl(31887905) }, // Familiar-Possessed - Hiita
   { name: "Fiendsmith", rating: "S", price: 200, imageUrl: getCardImageUrl(2463794) }, // Fiendsmith's Requiem
   { name: "Fire Fist", rating: "B", price: 50, imageUrl: getCardImageUrl(6353603) }, // Brotherhood of the Fire Fist - Tiger King
   { name: "Fire King", rating: "S", price: 200, imageUrl: getCardImageUrl(59388357) }, // Fire King High Avatar Garunix
@@ -214,7 +213,6 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Laval", rating: "D", price: 10, imageUrl: getCardImageUrl(30303854) }, // Laval the Greater
   { name: "Libromancer", rating: "B", price: 50, imageUrl: getCardImageUrl(19516687) }, // Libromancer First Appearance
   { name: "Lightsworn", rating: "B", price: 50, imageUrl: getCardImageUrl(22624373) }, // Judgment Dragon
-  { name: "lswarm", rating: "D", price: 10, imageUrl: getCardImageUrl(42679662) }, // Evilswarm Ophion
   { name: "Lunalight", rating: "B", price: 50, imageUrl: getCardImageUrl(11317977) }, // Lunalight Sabre Dancer
   { name: "Lyrilusc", rating: "A", price: 100, imageUrl: getCardImageUrl(8491961) }, // Lyrilusc - Assembled Nightingale
   { name: "Machina", rating: "B", price: 50, imageUrl: getCardImageUrl(23469398) }, // Machina Fortress
@@ -343,7 +341,6 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Tellarknight", rating: "C", price: 25, imageUrl: getCardImageUrl(10125011) }, // Stellarknight Delteros
   { name: "Tenyi", rating: "A", price: 100, imageUrl: getCardImageUrl(87052196) }, // Tenyi Spirit - Vishuda
   { name: "T.G.", rating: "B", price: 50, imageUrl: getCardImageUrl(63180841) }, // T.G. Hyper Librarian
-  { name: "The Agent", rating: "B", price: 50, imageUrl: getCardImageUrl(91188343) }, // The Agent of Creation - Venus
   { name: "Phantom Knights", rating: "A", price: 100, imageUrl: getCardImageUrl(2857636) }, // The Phantom Knights of Break Sword
   { name: "The Weather", rating: "B", price: 50, imageUrl: getCardImageUrl(52834429) }, // The Weather Painter Rainbow
   { name: "Therion", rating: "A", price: 100, imageUrl: getCardImageUrl(71832012) }, // Therion "King" Regulus
@@ -358,7 +355,6 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Triamid", rating: "C", price: 25, imageUrl: getCardImageUrl(45383307) }, // Triamid Sphinx
   { name: "Tri-Brigade", rating: "A", price: 100, imageUrl: getCardImageUrl(51097887) }, // Tri-Brigade Shuraig the Ominous Omen
   { name: "Trickstar", rating: "B", price: 50, imageUrl: getCardImageUrl(37405032) }, // Trickstar Holly Angel
-  { name: "Lightsworn", rating: "C", price: 25, imageUrl: getCardImageUrl(45425051) }, // Lumina, Twilightsworn Shaman
   { name: "U.A.", rating: "C", price: 25, imageUrl: getCardImageUrl(34614289) }, // U.A. Mighty Slugger
   { name: "Unchained", rating: "S", price: 200, imageUrl: getCardImageUrl(80801743) }, // Unchained Abomination
   { name: "Ursarctic", rating: "C", price: 25, imageUrl: getCardImageUrl(89264428) }, // Ursarctic Septentrion
