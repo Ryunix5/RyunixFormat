@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 150">
+  <defs>
+    <style>
+      .text { 
+        font-family: 'Impact', sans-serif; 
+        font-weight: 900;
+        letter-spacing: 2px;
+      }
+      .yugioh { 
+        fill: #DC143C;
+        stroke: #000;
+        stroke-width: 2px;
+      }
+      .subtitle {
+        fill: #FFF;
+        font-size: 14px;
+        font-weight: 700;
+      }
+    </style>
+  </defs>
+  
+  <!-- Main Yu-Gi-Oh! Text -->
+  <text x="250" y="70" text-anchor="middle" class="text yugioh" font-size="60">Yu-Gi-Oh!</text>
+  
+  <!-- Trading Card Game Subtitle -->
+  <text x="250" y="100" text-anchor="middle" class="text subtitle" font-size="20">TRADING CARD GAME</text>
+</svg>

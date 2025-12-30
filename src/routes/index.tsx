@@ -217,9 +217,7 @@ function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent rounded-xl pointer-events-none" />
         <CardHeader className="space-y-2 pb-6 relative">
           <div className="flex items-center justify-center mb-2">
-            <div className="text-4xl font-black bg-gradient-to-r from-red-600 via-red-500 to-red-600 bg-clip-text text-transparent drop-shadow-lg tracking-wider">
-              Yu-Gi-Oh!
-            </div>
+            <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-16 w-auto" />
           </div>
           <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent drop-shadow-sm">
             Ryunix Format
@@ -279,9 +277,7 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
       <header className="bg-slate-900/90 backdrop-blur-xl border-b border-amber-500/30 shadow-2xl shadow-amber-500/10 sticky top-0 z-50 relative">
         <div className="container mx-auto px-4 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="text-2xl font-black bg-gradient-to-r from-red-600 via-red-500 to-red-600 bg-clip-text text-transparent drop-shadow-lg tracking-wider">
-              Yu-Gi-Oh!
-            </div>
+            <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-10 w-auto" />
             <div>
               <h1 className="text-3xl font-black bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent drop-shadow-lg">Ryunix Format</h1>
               <p className="text-sm text-slate-400 font-medium mt-0.5">
