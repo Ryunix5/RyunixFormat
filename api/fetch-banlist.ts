@@ -52,12 +52,12 @@ interface YGOProdeckBanlistCard {
 // Fetches cards in batches and extracts their TCG banlist status
 async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatus }>> {
   const bannedCards: Array<{ name: string; status: BanStatus }> = [];
-  const batchSize = 1000; // Reduced from 2500 for faster responses
+  const batchSize = 500; // Further reduced to 500 for faster responses and higher success rate
   let offset = 0;
   let totalFetched = 0;
   const maxCards = 50000;
   const maxRetries = 3;
-  const requestTimeoutMs = 25000; // 25 seconds per batch (Vercel: 30-60s timeout)
+  const requestTimeoutMs = 15000; // 15 seconds per batch (even more aggressive)
 
   console.log('[BANLIST] Starting TCG banlist fetch from YGOPRODECK...');
   
@@ -272,25 +272,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let bannedCards;
     try {
       const timeRemaining = overallTimeoutMs - (Date.now() - startTime);
+      console.log(`[API-${requestId}] Time remaining: ${timeRemaining}ms`);
+      
       if (timeRemaining < 30000) {
         throw new Error(`Not enough time to complete request (${timeRemaining}ms remaining)`);
       }
       
-      bannedCards = await Promise.race([
-        fetchTCGBanlist(),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error(`Overall request timeout after ${overallTimeoutMs}ms`)),
-            timeRemaining
-          )
-        ),
-      ]);
+      const fetchPromise = fetchTCGBanlist();
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Overall request timeout after ${overallTimeoutMs}ms`)),
+          timeRemaining
+        )
+      );
+      
+      console.log(`[API-${requestId}] Racing fetch against ${timeRemaining}ms timeout...`);
+      bannedCards = await Promise.race([fetchPromise, timeoutPromise]);
+      console.log(`[API-${requestId}] Fetch race completed successfully`);
     } catch (fetchError) {
       const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
       const stack = fetchError instanceof Error ? fetchError.stack : '';
       console.error(`[API-${requestId}] ❌ Failed to fetch banlist: ${msg}`);
       if (stack) {
-        console.error(`[API-${requestId}] Stack: ${stack}`);
+        console.error(`[API-${requestId}] Stack: ${stack.substring(0, 500)}`);
       }
       return res.status(500).json({
         error: 'Failed to fetch TCG banlist',
