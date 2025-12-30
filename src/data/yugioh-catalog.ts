@@ -255,7 +255,6 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Nekroz", rating: "B", price: 50, imageUrl: getCardImageUrl(90307498) }, // Nekroz of Brionac
   { name: "Nemleria", rating: "C", price: 25, imageUrl: getCardImageUrl(70155677) }, // Dreaming Nemleria
   { name: "Neo-Spacian", rating: "D", price: 10, imageUrl: getCardImageUrl(58932615) }, // Neo-Spacian Glow Moss
-  { name: "Neos", rating: "B", price: 50, imageUrl: getCardImageUrl(89943723) }, // Elemental HERO Neos
   { name: "Nemeses", rating: "C", price: 25, imageUrl: getCardImageUrl(33212663) }, // Nemeses Keystone
   { name: "Nephthys", rating: "D", price: 10, imageUrl: getCardImageUrl(61441708) }, // Sacred Phoenix of Nephthys
   { name: "Nimble", rating: "D", price: 10, imageUrl: getCardImageUrl(88686573) }, // Nimble Momonga
@@ -277,7 +276,6 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Performapal", rating: "B", price: 50, imageUrl: getCardImageUrl(66768175) }, // Performapal Skullcrobat Joker
   { name: "Phantasm Spiral", rating: "C", price: 25, imageUrl: getCardImageUrl(42625254) }, // Phantasm Spiral Dragon
   { name: "Phantom Beast", rating: "D", price: 10, imageUrl: getCardImageUrl(6007213) }, // Phantom Beast Rock-Lizard
-  { name: "Photon", rating: "B", price: 50, imageUrl: getCardImageUrl(85747929) }, // Galaxy-Eyes Photon Dragon
   { name: "Plunder Patroll", rating: "A", price: 100, imageUrl: getCardImageUrl(67647362) }, // Plunder Patrollship Brann
   { name: "Prank-Kids", rating: "B", price: 50, imageUrl: getCardImageUrl(81997228) }, // Prank-Kids Meow-Meow-Mu
   { name: "Predaplant", rating: "B", price: 50, imageUrl: getCardImageUrl(66309175) }, // Predaplant Verte Anaconda
@@ -381,7 +379,6 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "World Chalice", rating: "C", price: 25, imageUrl: getCardImageUrl(4709881) }, // Imduk the World Chalice Dragon
   { name: "World Legacy", rating: "B", price: 50, imageUrl: getCardImageUrl(92562411) }, // World Legacy Guardragon Mardark
   { name: "Worm", rating: "D", price: 10, imageUrl: getCardImageUrl(75081613) }, // Worm Zero
-  { name: "Xyz", rating: "C", price: 25, imageUrl: getCardImageUrl(39512984) }, // Number 39: Utopia
   { name: "X-Saber", rating: "C", price: 25, imageUrl: getCardImageUrl(45206713) }, // XX-Saber Gottoms
   { name: "Yang Zing", rating: "C", price: 25, imageUrl: getCardImageUrl(83755611) }, // Baxia, Brightness of the Yang Zing
   { name: "Yosenju", rating: "C", price: 25, imageUrl: getCardImageUrl(65247798) }, // Mayosenju Daibak
@@ -391,7 +388,6 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Zoodiac", rating: "B", price: 50, imageUrl: getCardImageUrl(48905153) }, // Zoodiac Drident
   { name: "Zubaba", rating: "D", price: 10, imageUrl: getCardImageUrl(57036718) }, // Zubaba Knight
   { name: "ZW", rating: "D", price: 10, imageUrl: getCardImageUrl(6330307) }, // ZW - Unicorn Spear
-  { name: "Gaia The Fierce Knight", rating: "C", price: 25, imageUrl: getCardImageUrl(6368038) }, // Gaia The Fierce Knight
   { name: "Celtic Guardian", rating: "D", price: 10, imageUrl: getCardImageUrl(39507162) }, // Celtic Guardian
   { name: "Umi", rating: "C", price: 25, imageUrl: getCardImageUrl(22702055) }, // Umi
   { name: "Trap Hole", rating: "B", price: 50, imageUrl: getCardImageUrl(4206964) }, // Trap Hole
@@ -567,13 +563,11 @@ export const STAPLE_CARDS: CatalogItem[] = [
   { name: "Dimensional Prison", rating: "B", price: 50, imageUrl: getCardImageUrl(70342110) },
   { name: "Heavy Storm Duster", rating: "B", price: 50, imageUrl: getCardImageUrl(23924608) },
   { name: "Trap Trick", rating: "A", price: 100, imageUrl: getCardImageUrl(90956013) },
-  { name: "Evenly Matched", rating: "S", price: 200, imageUrl: getCardImageUrl(15693423) },
   { name: "Shared Ride", rating: "A", price: 100, imageUrl: getCardImageUrl(96363153) },
   { name: "Cycle Reader", rating: "B", price: 50, imageUrl: getCardImageUrl(64379430) },
   { name: "Psy-Frame Driver", rating: "B", price: 50, imageUrl: getCardImageUrl(68304193) },
   { name: "Battle Fader", rating: "B", price: 50, imageUrl: getCardImageUrl(15893860) },
   { name: "Swift Scarecrow", rating: "B", price: 50, imageUrl: getCardImageUrl(95750695) },
-  { name: "Gorz the Emissary of Darkness", rating: "B", price: 50, imageUrl: getCardImageUrl(44330098) },
   { name: "Tragoedia", rating: "B", price: 50, imageUrl: getCardImageUrl(69890967) },
   
   // Legacy/Classic Non-Archetype Cards
