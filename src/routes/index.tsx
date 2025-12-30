@@ -223,8 +223,8 @@ function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
     <div className="flex items-center justify-center min-h-screen bg-slate-900">
       <Card className="w-full max-w-md border border-slate-700 bg-slate-800">
         <CardHeader className="space-y-2 pb-6">
-          <div className="flex items-center justify-center mb-2">
-            <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-16 w-auto" />
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-12 w-auto" />
           </div>
           <CardTitle className="text-3xl font-bold text-center text-amber-400">
             Ryunix Format
