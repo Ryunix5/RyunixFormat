@@ -11,16 +11,19 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Coins, ShoppingCart, History, User, LogOut, Users, Gift, KeyRound, BarChart3, Save, List, Grid3X3, LayoutGrid, X, Edit3, ChevronDown, ChevronUp, Eye, Search, Plus, Image, Package, Layers, ShoppingBag, Trash2, Star, Info, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Coins, ShoppingCart, History, User, LogOut, Users, Gift, KeyRound, BarChart3, Save, List, Grid3X3, LayoutGrid, X, Edit3, ChevronDown, ChevronUp, Eye, Search, Plus, Image, Package, Layers, ShoppingBag, Trash2, Star, Info, ArrowUpDown, ArrowUp, ArrowDown, Shield } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { CardModificationsORM } from "@/sdk/database/orm/orm_card_modifications";
 import { PurchaseORM, type PurchaseModel, PurchaseItemType } from "@/sdk/database/orm/orm_purchase";
 import { CoinLogORM, type CoinLogModel } from "@/sdk/database/orm/orm_coin_log";
 import { UserORM, type UserModel } from "@/sdk/database/orm/orm_user";
+import { BanlistORM } from "@/sdk/database/orm/orm_banlist";
 import { ARCHETYPE_DECKS, STAPLE_CARDS, type CatalogItem, type MetaRating, META_RATING_PRICES } from "@/data/yugioh-catalog";
 import { hashPassword, verifyPassword, createAuthToken, getAuthToken, setAuthToken, clearAuthToken } from "@/lib/auth";
 import { getUserByUsername } from "@/lib/db";
 import { initializeAdminUser } from "@/lib/init-admin";
+import { BanlistManageTab } from "@/components/BanlistManageTab";
+import { BanIndicator } from "@/components/BanIndicator";
 
 export const Route = createFileRoute("/")({
   component: App,
@@ -76,6 +79,19 @@ function App() {
       }
     })();
 
+    // Load banlist at app startup
+    (async () => {
+      try {
+        const orm = BanlistORM.getInstance();
+        const loadedBanlist = await orm.getBanlist();
+        Object.keys(banlist).forEach(k => delete banlist[k]);
+        Object.assign(banlist, loadedBanlist);
+        console.debug('Loaded banlist at app startup', { count: Object.keys(loadedBanlist).length });
+        notifyBanlistChange();
+      } catch (e) {
+        console.warn('Failed to load banlist at app startup', e);
+      }
+    })();
     // Listen for cross-tab updates to card modifications (so player views update when admin saves in another tab)
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -379,6 +395,8 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
   
   // Listen for modification changes from admin panel
   const _modVersion = useModificationVersion();
+  // Listen for banlist changes
+  const _banlistVersion = useBanlistVersion();
 
   // Debounced search for performance
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
@@ -398,6 +416,10 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
 
   const getModifiedPrice = useCallback((item: CatalogItem): number => {
     return cardModifications[item.name]?.price ?? item.price;
+  }, []);
+
+  const getBanStatus = useCallback((cardName: string) => {
+    return banlist[cardName]?.banStatus ?? 'unlimited';
   }, []);
 
   const getModifiedImage = useCallback((item: CatalogItem): string | undefined => {
@@ -1014,12 +1036,15 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
               <Card key={item.name} ref={(el) => observeItem(el, item.name)} className="border border-slate-700 bg-slate-800 overflow-hidden">
                 <CardHeader className="pb-3">
                   <div className="flex items-start gap-3">
-                    <div className="shrink-0 size-16 rounded-lg overflow-hidden border border-slate-600 bg-slate-700">
+                    <div className="shrink-0 size-16 rounded-lg overflow-hidden border border-slate-600 bg-slate-700 relative">
                       {imageUrl ? (
                         <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-slate-500 text-2xl font-bold">?</div>
                       )}
+                      <div className="absolute bottom-0 right-0">
+                        <BanIndicator banStatus={getBanStatus(item.name)} size="sm" />
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
@@ -1135,11 +1160,17 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                     title="Click to view details"
                   >
                     {card.card_images?.[0]?.image_url_small && (
-                      <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
+                      <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2 relative">
                         <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
+                        <div className="absolute top-1 right-1">
+                          <BanIndicator banStatus={getBanStatus(card.name)} size="sm" />
+                        </div>
                       </div>
                     )}
-                    <div className="text-xs font-semibold text-slate-100 truncate" title={card.name}>{card.name}</div>
+                    <div className="flex items-center gap-1">
+                      <div className="text-xs font-semibold text-slate-100 truncate flex-1" title={card.name}>{card.name}</div>
+                      {!card.card_images?.[0]?.image_url_small && <BanIndicator banStatus={getBanStatus(card.name)} size="sm" />}
+                    </div>
                     <div className="text-xs text-slate-400 truncate">{card.type}</div>
                     {card.atk !== undefined && (
                       <div className="text-xs text-amber-400">ATK: {card.atk} {card.def !== undefined && `/ DEF: ${card.def}`}</div>
@@ -1939,11 +1970,17 @@ function CollectionTab({ userId }: { userId: string }) {
                 {archetypeCards.map((card) => (
                   <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors">
                     {card.card_images?.[0]?.image_url_small && (
-                      <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
+                      <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2 relative">
                         <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
+                        <div className="absolute top-1 right-1">
+                          <BanIndicator banStatus={getBanStatus(card.name)} size="sm" />
+                        </div>
                       </div>
                     )}
-                    <div className="text-xs font-semibold text-slate-100 truncate" title={card.name}>{card.name}</div>
+                    <div className="flex items-center gap-1">
+                      <div className="text-xs font-semibold text-slate-100 truncate flex-1" title={card.name}>{card.name}</div>
+                      {!card.card_images?.[0]?.image_url_small && <BanIndicator banStatus={getBanStatus(card.name)} size="sm" />}
+                    </div>
                     <div className="text-xs text-slate-400 truncate">{card.type}</div>
                     {card.atk !== undefined && (
                       <div className="text-xs text-amber-400">ATK: {card.atk} {card.def !== undefined && `/ DEF: ${card.def}`}</div>
@@ -1961,6 +1998,20 @@ function CollectionTab({ userId }: { userId: string }) {
 
 function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onLogout: () => void; onUserUpdate: (userId: string) => void }) {
   const [activeTab, setActiveTab] = useState("create-user");
+  const banlistVersion = useBanlistVersion();
+
+  async function handleBanlistChange() {
+    // Reload banlist from database
+    try {
+      const orm = BanlistORM.getInstance();
+      const loadedBanlist = await orm.getBanlist();
+      Object.keys(banlist).forEach(k => delete banlist[k]);
+      Object.assign(banlist, loadedBanlist);
+      notifyBanlistChange();
+    } catch (e) {
+      console.error('Failed to reload banlist after change', e);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative">
@@ -1987,7 +2038,7 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
 
       <main className="container mx-auto px-4 py-8 relative">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 md:grid-cols-8 max-w-6xl h-auto md:h-12 bg-slate-800   border border-rose-700 p-1">
+          <TabsList className="grid w-full grid-cols-4 md:grid-cols-9 max-w-6xl h-auto md:h-12 bg-slate-800   border border-rose-700 p-1">
             <TabsTrigger value="create-user" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <Users className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Create User</span>
@@ -2028,6 +2079,11 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
               <span className="hidden sm:inline">Staples</span>
               <span className="sm:hidden">Staples</span>
             </TabsTrigger>
+            <TabsTrigger value="banlist" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
+              <Shield className="size-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Banlist</span>
+              <span className="sm:hidden">Ban</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="create-user" className="mt-6 animate-in fade-in-50 duration-300">
@@ -2060,6 +2116,10 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
 
           <TabsContent value="staples-manage" className="mt-6 animate-in fade-in-50 duration-300">
             <StaplesManageTab />
+          </TabsContent>
+
+          <TabsContent value="banlist" className="mt-6 animate-in fade-in-50 duration-300">
+            <BanlistManageTab key={banlistVersion} onBanlistChange={handleBanlistChange} />
           </TabsContent>
         </Tabs>
       </main>
@@ -2864,9 +2924,14 @@ const cardModifications: Record<string, { rating?: MetaRating; price?: number; d
 const customStaples: Array<{ name: string; rating: MetaRating; price: number; imageUrl?: string }> = [];
 const removedStaples: Set<string> = new Set();
 
+// Module-level banlist storage (persisted to Supabase banlist table)
+const banlist: Record<string, { cardName: string; banStatus: string; lastUpdated: string; source: string }> = {};
+
 // Module-level modification version counter and listeners for cross-component updates
 let modificationVersion = 0;
+let banlistVersion = 0;
 const modificationListeners: Set<() => void> = new Set();
+const banlistListeners: Set<() => void> = new Set();
 
 // Debounce timer for persisting modifications
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2930,6 +2995,21 @@ function notifyModificationChange() {
   persistTimer = setTimeout(() => {
     persistModificationsToDb();
   }, 500);
+}
+
+function notifyBanlistChange() {
+  banlistVersion++;
+  banlistListeners.forEach(listener => listener());
+}
+
+function useBanlistVersion() {
+  const [version, setVersion] = useState(banlistVersion);
+  useEffect(() => {
+    const listener = () => setVersion(banlistVersion);
+    banlistListeners.add(listener);
+    return () => { banlistListeners.delete(listener); };
+  }, []);
+  return version;
 }
 
 function useModificationVersion() {
@@ -3671,6 +3751,7 @@ function ArchetypeCardsTab() {
                                 <div className="text-sm font-medium text-slate-100 truncate">{card.name}</div>
                                 <div className="text-xs text-slate-400 truncate">{card.type}</div>
                               </div>
+                              <BanIndicator banStatus={getBanStatus(card.name)} size="sm" />
                               <button
                                 type="button"
                                 onClick={() => removeCardFromArchetype(card.name)}
@@ -3707,6 +3788,9 @@ function StaplesManageTab() {
   // Listen for modification changes (shared with catalog)
   const modVersion = useModificationVersion();
   
+  // Listen for banlist changes
+  const _banlistVersion = useBanlistVersion();
+  
   // Editing staple state
   const [editingStaple, setEditingStaple] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -3724,6 +3808,11 @@ function StaplesManageTab() {
       s.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery, effectiveStaples]);
+  
+  // Get ban status for a card
+  const getBanStatus = useCallback((cardName: string) => {
+    return banlist[cardName]?.banStatus ?? 'unlimited';
+  }, [_banlistVersion]);
 
   // Rating style helper
   function getRatingBadgeStyle(rating: string): string {
@@ -4031,6 +4120,7 @@ function StaplesManageTab() {
                           <div className="text-sm font-medium text-slate-100 truncate">{staple.name}</div>
                           <div className="text-xs text-slate-400">{staple.price} coins</div>
                         </div>
+                        <BanIndicator banStatus={getBanStatus(staple.name)} size="sm" />
                         <Badge className={`text-xs ${getRatingBadgeStyle(staple.rating)}`}>
                           {staple.rating}
                         </Badge>
