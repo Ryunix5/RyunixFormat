@@ -403,7 +403,6 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Fusion", rating: "C", price: 25, imageUrl: getCardImageUrl(24094653) }, // Polymerization
   { name: "Battleguard", rating: "D", price: 10, imageUrl: getCardImageUrl(5577149) }, // Swamp Battleguard
   { name: "Jinzo", rating: "C", price: 25, imageUrl: getCardImageUrl(77585513) }, // Jinzo
-  { name: "Solemn Cards", rating: "S", price: 200, imageUrl: getCardImageUrl(41420027) }, // Solemn Judgment
   { name: "Mirror Force", rating: "B", price: 50, imageUrl: getCardImageUrl(44095762) }, // Mirror Force
   { name: "Relinquished", rating: "C", price: 25, imageUrl: getCardImageUrl(64631466) }, // Relinquished
   { name: "Jar", rating: "D", price: 10, imageUrl: getCardImageUrl(3900605) }, // Morphing Jar
