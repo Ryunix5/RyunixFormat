@@ -58,111 +58,131 @@ async function fetchTCGBanlist(): Promise<Array<{ name: string; status: BanStatu
   const requestTimeoutMs = 10000; // 10 seconds for banlist fetch
   const maxRetries = 2;
   
-  for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
-    try {
-      // YGOProDeck banlist endpoint returns the official Konami banlist
-      const url = 'https://db.ygoprodeck.com/api/v7/banlist.php';
-      
-      if (retryCount > 0) {
-        console.log(`[BANLIST] Retry ${retryCount}/${maxRetries - 1}`);
-      } else {
-        console.log(`[BANLIST] Fetching from ${url}`);
-      }
-
-      const abortController = new AbortController();
-      const timeoutHandle = setTimeout(() => {
-        console.log(`[BANLIST] Timeout after ${requestTimeoutMs}ms, aborting`);
-        abortController.abort();
-      }, requestTimeoutMs);
-
-      let response: Response;
+  // Try multiple possible endpoints
+  const endpoints = [
+    'https://db.ygoprodeck.com/api/v7/bans.php',
+    'https://db.ygoprodeck.com/api/v7/banlist',
+    'https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist=1',
+  ];
+  
+  for (const baseUrl of endpoints) {
+    for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
       try {
-        response = await fetch(url, {
-          signal: abortController.signal,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          },
-        });
-      } catch (fetchError) {
+        if (retryCount > 0) {
+          console.log(`[BANLIST] Retry ${retryCount}/${maxRetries - 1} with ${baseUrl}`);
+        } else {
+          console.log(`[BANLIST] Trying endpoint: ${baseUrl}`);
+        }
+
+        const abortController = new AbortController();
+        const timeoutHandle = setTimeout(() => {
+          console.log(`[BANLIST] Timeout after ${requestTimeoutMs}ms, aborting`);
+          abortController.abort();
+        }, requestTimeoutMs);
+
+        let response: Response;
+        try {
+          response = await fetch(baseUrl, {
+            signal: abortController.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            },
+          });
+        } catch (fetchError) {
+          clearTimeout(timeoutHandle);
+          const fetchErrorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+          console.error(`[BANLIST] Fetch failed: ${fetchErrorMsg}`);
+          continue;
+        }
+
         clearTimeout(timeoutHandle);
-        const fetchErrorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-        console.error(`[BANLIST] Fetch failed: ${fetchErrorMsg}`);
-        if (retryCount < maxRetries - 1) {
-          await new Promise(r => setTimeout(r, 1000));
+        console.log(`[BANLIST] Response status: ${response.status}`);
+
+        if (!response.ok) {
+          const errorBody = await response.text().catch(() => '');
+          console.error(`[BANLIST] HTTP ${response.status}: ${errorBody.substring(0, 200)}`);
           continue;
         }
-        throw new Error(`Fetch failed: ${fetchErrorMsg}`);
-      }
 
-      clearTimeout(timeoutHandle);
-      console.log(`[BANLIST] Response status: ${response.status}`);
-
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => '');
-        console.error(`[BANLIST] HTTP ${response.status}: ${errorBody.substring(0, 200)}`);
-        if (retryCount < maxRetries - 1) {
-          await new Promise(r => setTimeout(r, 1000));
+        const responseText = await response.text();
+        if (!responseText || responseText.trim().length === 0) {
+          console.error(`[BANLIST] Empty response from ${baseUrl}`);
           continue;
         }
-        throw new Error(`HTTP ${response.status}`);
-      }
 
-      const responseText = await response.text();
-      if (!responseText || responseText.trim().length === 0) {
-        throw new Error('Empty response from banlist endpoint');
-      }
+        console.log(`[BANLIST] Response size: ${responseText.length} bytes, first 500 chars: ${responseText.substring(0, 500)}`);
 
-      console.log(`[BANLIST] Response size: ${responseText.length} bytes`);
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error(`[BANLIST] JSON parse failed`);
+          continue;
+        }
 
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error(`[BANLIST] JSON parse failed. First 200 chars: ${responseText.substring(0, 200)}`);
-        throw new Error('Invalid JSON response');
-      }
+        if (!data) {
+          console.error(`[BANLIST] No data in response`);
+          continue;
+        }
 
-      // The banlist API returns an object like:
-      // {
-      //   "forbidden": [{ "id": ..., "name": "Card Name" }, ...],
-      //   "limited": [...],
-      //   "semi_limited": [...]
-      // }
-      
-      if (!data) {
-        throw new Error('No data in banlist response');
-      }
+        // Handle different response formats
+        let forbidden: any[] = [];
+        let limited: any[] = [];
+        let semiLimited: any[] = [];
 
-      // Extract banned cards from official banlist
-      const forbidden = Array.isArray(data.forbidden) ? data.forbidden : [];
-      const limited = Array.isArray(data.limited) ? data.limited : [];
-      const semiLimited = Array.isArray(data.semi_limited) ? data.semi_limited : [];
+        // Format 1: { forbidden: [...], limited: [...], semi_limited: [...] }
+        if (data.forbidden || data.limited || data.semi_limited) {
+          forbidden = Array.isArray(data.forbidden) ? data.forbidden : [];
+          limited = Array.isArray(data.limited) ? data.limited : [];
+          semiLimited = Array.isArray(data.semi_limited) ? data.semi_limited : [];
+        }
+        // Format 2: { banlist: { forbidden: [...], ... } }
+        else if (data.banlist) {
+          forbidden = Array.isArray(data.banlist.forbidden) ? data.banlist.forbidden : [];
+          limited = Array.isArray(data.banlist.limited) ? data.banlist.limited : [];
+          semiLimited = Array.isArray(data.banlist.semi_limited) ? data.banlist.semi_limited : [];
+        }
+        // Format 3: Array of cards with ban status
+        else if (Array.isArray(data)) {
+          const response = data as any[];
+          for (const item of response) {
+            if (item.banlist_info) {
+              const banStatus = item.banlist_info.ban_tcg;
+              if (banStatus === 'Forbidden') forbidden.push(item);
+              else if (banStatus === 'Limited') limited.push(item);
+              else if (banStatus === 'Semi-Limited') semiLimited.push(item);
+            }
+          }
+        }
 
-      console.log(`[BANLIST] Forbidden: ${forbidden.length}, Limited: ${limited.length}, Semi-Limited: ${semiLimited.length}`);
+        if (forbidden.length === 0 && limited.length === 0 && semiLimited.length === 0) {
+          console.error(`[BANLIST] No banned cards found in response`);
+          continue;
+        }
 
-      for (const card of forbidden) {
-        bannedCards.push({ name: card.name, status: 'forbidden' });
-      }
-      for (const card of limited) {
-        bannedCards.push({ name: card.name, status: 'limited' });
-      }
-      for (const card of semiLimited) {
-        bannedCards.push({ name: card.name, status: 'semi-limited' });
-      }
+        console.log(`[BANLIST] ✅ Forbidden: ${forbidden.length}, Limited: ${limited.length}, Semi-Limited: ${semiLimited.length}`);
 
-      console.log(`[BANLIST] ✅ Fetched official Konami banlist: ${bannedCards.length} banned cards`);
-      return bannedCards;
+        for (const card of forbidden) {
+          bannedCards.push({ name: card.name || card.card_name, status: 'forbidden' });
+        }
+        for (const card of limited) {
+          bannedCards.push({ name: card.name || card.card_name, status: 'limited' });
+        }
+        for (const card of semiLimited) {
+          bannedCards.push({ name: card.name || card.card_name, status: 'semi-limited' });
+        }
 
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error(`[BANLIST] Error: ${errorMsg}`);
-      if (retryCount === maxRetries - 1) {
-        throw error;
+        console.log(`[BANLIST] ✅ Fetched official Konami banlist: ${bannedCards.length} banned cards`);
+        return bannedCards;
+
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[BANLIST] Error with ${baseUrl}: ${errorMsg}`);
       }
     }
   }
 
-  throw new Error('Failed to fetch banlist after all retries');
+  throw new Error('Failed to fetch banlist from all endpoints');
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
