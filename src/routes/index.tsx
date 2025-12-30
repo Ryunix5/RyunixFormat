@@ -144,7 +144,7 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <div className="flex items-center justify-center min-h-screen bg-slate-900">
         <div className="text-lg font-semibold text-amber-400 animate-pulse">Loading...</div>
       </div>
     );
@@ -208,26 +208,21 @@ function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
 
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
-      {/* Decorative elements */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23fbbf24%22%20fill-opacity%3D%220.03%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-amber-500/10 to-transparent rounded-full blur-3xl" />
-
-      <Card className="w-full max-w-md shadow-2xl border-2 border-amber-500/30 bg-slate-900/90 backdrop-blur-xl relative z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent rounded-xl pointer-events-none" />
-        <CardHeader className="space-y-2 pb-6 relative">
+    <div className="flex items-center justify-center min-h-screen bg-slate-900">
+      <Card className="w-full max-w-md border border-slate-700 bg-slate-800">
+        <CardHeader className="space-y-2 pb-6">
           <div className="flex items-center justify-center mb-2">
             <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-16 w-auto" />
           </div>
-          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent drop-shadow-sm">
+          <CardTitle className="text-3xl font-bold text-center text-amber-400">
             Ryunix Format
           </CardTitle>
           <CardDescription className="text-base text-center text-slate-400">Login to manage your tournament coins and decks</CardDescription>
         </CardHeader>
-        <CardContent className="relative">
+        <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <Alert variant="destructive" className="animate-in fade-in-50 duration-300 bg-red-950/50 border-red-500/50">
+              <Alert variant="destructive" className="bg-red-950 border-red-500">
                 <AlertDescription className="text-red-200">{error}</AlertDescription>
               </Alert>
             )}
@@ -240,7 +235,7 @@ function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={isLoading}
-                className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20"
+                className="bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus:border-amber-500"
               />
             </div>
             <div className="space-y-2">
@@ -252,10 +247,10 @@ function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
-                className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20"
+                className="bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus:border-amber-500"
               />
             </div>
-            <Button type="submit" className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold transition-all duration-300 shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold" disabled={isLoading}>
               {isLoading ? "Logging in..." : "Enter the Arena"}
             </Button>
           </form>
@@ -269,31 +264,27 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
   const [activeTab, setActiveTab] = useState("catalog");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative">
-      {/* Enhanced Background pattern */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23fbbf24%22%20fill-opacity%3D%220.02%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50 pointer-events-none" />
-      <div className="absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b from-amber-500/5 to-transparent pointer-events-none" />
-
-      <header className="bg-slate-900/90 backdrop-blur-xl border-b border-amber-500/30 shadow-2xl shadow-amber-500/10 sticky top-0 z-50 relative">
+    <div className="min-h-screen bg-slate-900">
+      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-10 w-auto" />
             <div>
-              <h1 className="text-3xl font-black bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent drop-shadow-lg">Ryunix Format</h1>
+              <h1 className="text-3xl font-black text-amber-400">Ryunix Format</h1>
               <p className="text-sm text-slate-400 font-medium mt-0.5">
                 Welcome back, <span className="text-amber-300 font-bold">{user.username}</span>
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-500/20 px-6 py-3 rounded-xl border border-amber-400/40 shadow-xl shadow-amber-500/20 backdrop-blur-sm">
-              <Coins className="size-6 text-amber-300 drop-shadow-lg" />
+            <div className="flex items-center gap-3 bg-slate-700 px-6 py-3 rounded-lg border border-slate-600">
+              <Coins className="size-6 text-amber-400" />
               <div className="flex flex-col">
-                <span className="text-xs text-amber-200/70 font-medium uppercase tracking-wide">Balance</span>
-                <span className="font-black text-2xl text-amber-300 drop-shadow-lg">{user.coin.toLocaleString()}</span>
+                <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Balance</span>
+                <span className="font-black text-2xl text-amber-400">{user.coin.toLocaleString()}</span>
               </div>
             </div>
-            <Button variant="outline" onClick={onLogout} className="border-slate-600 text-slate-300 hover:bg-red-950/50 hover:text-red-300 hover:border-red-500/50 transition-all duration-200 shadow-lg">
+            <Button variant="outline" onClick={onLogout} className="border-slate-600 text-slate-300 hover:bg-red-950 hover:text-red-300 hover:border-red-500">
               <LogOut className="size-4 mr-2" />
               Logout
             </Button>
@@ -301,25 +292,25 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-10 relative">
+      <main className="container mx-auto px-4 py-10">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto h-14 bg-slate-800/70 backdrop-blur-md shadow-2xl border border-amber-500/30 rounded-xl p-1">
-            <TabsTrigger value="catalog" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-900 data-[state=active]:font-bold data-[state=active]:shadow-lg data-[state=active]:shadow-amber-500/40 text-slate-400 transition-all duration-300 rounded-lg">
+          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto h-14 bg-slate-800 border border-slate-700 rounded-lg p-1">
+            <TabsTrigger value="catalog" className="data-[state=active]:bg-amber-500 data-[state=active]:text-slate-900 data-[state=active]:font-bold text-slate-400 rounded-lg">
               <ShoppingBag className="size-5 mr-2" />
               <span className="text-base">Store</span>
             </TabsTrigger>
-            <TabsTrigger value="collection" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-900 data-[state=active]:font-bold data-[state=active]:shadow-lg data-[state=active]:shadow-amber-500/40 text-slate-400 transition-all duration-300 rounded-lg">
+            <TabsTrigger value="collection" className="data-[state=active]:bg-amber-500 data-[state=active]:text-slate-900 data-[state=active]:font-bold text-slate-400 rounded-lg">
               <Package className="size-5 mr-2" />
               <span className="text-base">Collection</span>
               My Collection
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="catalog" className="mt-6 animate-in fade-in-50 duration-300">
+          <TabsContent value="catalog" className="mt-6">
             <CatalogTab user={user} onUserUpdate={onUserUpdate} />
           </TabsContent>
 
-          <TabsContent value="collection" className="mt-6 animate-in fade-in-50 duration-300">
+          <TabsContent value="collection" className="mt-6">
             <CollectionTab userId={user.id} />
           </TabsContent>
         </Tabs>
@@ -721,15 +712,15 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
   function getRatingStyle(rating: string) {
     switch (rating) {
       case "S+":
-        return "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/30 border-rose-400";
+        return "bg-rose-500 text-white border-rose-400";
       case "S":
-        return "bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 shadow-lg shadow-amber-500/30 border-amber-400";
+        return "bg-amber-500 text-slate-900 border-amber-400";
       case "A":
-        return "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md shadow-violet-500/20 border-violet-400";
+        return "bg-violet-500 text-white border-violet-400";
       case "B":
-        return "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-500/20 border-blue-400";
+        return "bg-blue-500 text-white border-blue-400";
       case "C":
-        return "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400";
+        return "bg-emerald-500 text-white border-emerald-400";
       case "D":
         return "bg-slate-600 text-slate-200 border-slate-500";
       case "F":
@@ -742,28 +733,28 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
   return (
     <div className="space-y-6">
       {error && (
-        <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+        <Alert variant="destructive" className="bg-red-950 border-red-500">
           <AlertDescription className="text-red-200">{error}</AlertDescription>
         </Alert>
       )}
       {success && (
-        <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 shadow-lg">
+        <Alert className="bg-emerald-950 border border-emerald-500 text-emerald-200">
           <AlertDescription className="font-semibold">{success}</AlertDescription>
         </Alert>
       )}
 
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
         <div className="flex gap-2">
-          <Button variant={category === "decks" ? "default" : "outline"} onClick={() => setCategory("decks")} className={category === "decks" ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold shadow-lg shadow-amber-500/25" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500/50 hover:text-amber-300 transition-all duration-200"}>
+          <Button variant={category === "decks" ? "default" : "outline"} onClick={() => setCategory("decks")} className={category === "decks" ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400"}>
             Archetype Decks ({ARCHETYPE_DECKS.length})
           </Button>
-          <Button variant={category === "staples" ? "default" : "outline"} onClick={() => setCategory("staples")} className={category === "staples" ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold shadow-lg shadow-amber-500/25" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500/50 hover:text-amber-300 transition-all duration-200"}>
+          <Button variant={category === "staples" ? "default" : "outline"} onClick={() => setCategory("staples")} className={category === "staples" ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400"}>
             Staple Cards ({getEffectiveStaples().length})
           </Button>
         </div>
         <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
           <div className="relative w-full md:w-48">
-            <Input placeholder="Search items..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pr-8 transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20 shadow-sm" />
+            <Input placeholder="Search items..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pr-8 bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus:border-amber-500" />
             {searchTerm && (
               <button type="button" onClick={() => setSearchTerm("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
                 <X className="size-4" />
@@ -771,7 +762,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
             )}
           </div>
           <Select value={filterRating} onValueChange={setFilterRating}>
-            <SelectTrigger className="w-28 shadow-sm transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 focus:border-amber-500 focus:ring-amber-500/20">
+            <SelectTrigger className="w-28 bg-slate-700 border-slate-600 text-slate-100 focus:border-amber-500">
               <SelectValue placeholder="Rating" />
             </SelectTrigger>
             <SelectContent className="bg-slate-800 border-slate-700">
@@ -785,14 +776,14 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
               <SelectItem value="F" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">F</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-0.5 border border-slate-600 rounded-md p-0.5 bg-slate-800/70">
-            <Button variant="ghost" size="icon" onClick={() => setViewMode("list")} className={`size-8 ${viewMode === "list" ? "bg-amber-500/30 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"}`} title="List View">
+          <div className="flex items-center gap-0.5 border border-slate-600 rounded-md p-0.5 bg-slate-800">
+            <Button variant="ghost" size="icon" onClick={() => setViewMode("list")} className={`size-8 ${viewMode === "list" ? "bg-amber-500 text-slate-900" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700"}`} title="List View">
               <List className="size-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setViewMode("compact")} className={`size-8 ${viewMode === "compact" ? "bg-amber-500/30 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"}`} title="Compact View">
+            <Button variant="ghost" size="icon" onClick={() => setViewMode("compact")} className={`size-8 ${viewMode === "compact" ? "bg-amber-500 text-slate-900" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700"}`} title="Compact View">
               <Grid3X3 className="size-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setViewMode("grid")} className={`size-8 ${viewMode === "grid" ? "bg-amber-500/30 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"}`} title="Grid View">
+            <Button variant="ghost" size="icon" onClick={() => setViewMode("grid")} className={`size-8 ${viewMode === "grid" ? "bg-amber-500 text-slate-900" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700"}`} title="Grid View">
               <LayoutGrid className="size-4" />
             </Button>
           </div>
@@ -800,7 +791,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
       </div>
 
       {/* Stats and Info Bar */}
-      <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-slate-800/40 via-slate-800/30 to-slate-800/40 border border-slate-700/50 shadow-inner">
+      <div className="flex items-center justify-between p-4 rounded-lg bg-slate-800 border border-slate-700">
         <div className="flex items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
             <Package className="size-4 text-amber-400 animate-pulse" />
@@ -811,7 +802,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
           </div>
           <div className="h-6 w-px bg-slate-600" />
           <div className="flex items-center gap-2">
-            <Coins className="size-4 text-amber-400 drop-shadow-lg" />
+            <Coins className="size-4 text-amber-400 drop-" />
             <span className="text-slate-400">Your Balance:</span>
             <span className="font-bold text-amber-300 text-base">{user.coin.toLocaleString()}</span>
           </div>
@@ -855,8 +846,8 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
             const price = getModifiedPrice(item);
             const imageUrl = getModifiedImage(item);
             return (
-              <div key={item.name} ref={(el) => observeItem(el, item.name)} className="flex items-center gap-4 p-3 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors">
-                <div className="shrink-0 size-10 rounded overflow-hidden border border-slate-600/50 bg-slate-700/50">
+              <div key={item.name} ref={(el) => observeItem(el, item.name)} className="flex items-center gap-4 p-3 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors">
+                <div className="shrink-0 size-10 rounded overflow-hidden border border-slate-600 bg-slate-700">
                   {imageUrl ? (
                     <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
                   ) : (
@@ -874,11 +865,11 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                   )}
                 </div>
                 <Badge className={`font-bold shrink-0 ${getRatingStyle(rating)}`}>{rating}</Badge>
-                <div className="flex items-center gap-1.5 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/30">
+                <div className="flex items-center gap-1.5 bg-amber-900 px-2 py-1 rounded border border-amber-700">
                   <Coins className="size-3.5 text-amber-400" />
                   <span className="font-bold text-amber-300 text-sm">{price}</span>
                 </div>
-                <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold disabled:opacity-50 text-xs px-3">
+                <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50 text-xs px-3">
                   {purchasing === item.name ? "..." : "Buy"}
                 </Button>
               </div>
@@ -896,9 +887,9 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
             const price = getModifiedPrice(item);
             const imageUrl = getModifiedImage(item);
             return (
-              <div key={item.name} ref={(el) => observeItem(el, item.name)} className="p-3 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors flex flex-col gap-2">
+              <div key={item.name} ref={(el) => observeItem(el, item.name)} className="p-3 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="shrink-0 size-8 rounded overflow-hidden border border-slate-600/50 bg-slate-700/50">
+                  <div className="shrink-0 size-8 rounded overflow-hidden border border-slate-600 bg-slate-700">
                     {imageUrl ? (
                       <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
                     ) : (
@@ -919,7 +910,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                     <Coins className="size-3" />
                     <span className="text-sm font-bold">{price}</span>
                   </div>
-                  <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold disabled:opacity-50 text-xs h-7 px-2">
+                  <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50 text-xs h-7 px-2">
                     {purchasing === item.name ? "..." : "Buy"}
                   </Button>
                 </div>
@@ -938,11 +929,10 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
             const price = getModifiedPrice(item);
             const imageUrl = getModifiedImage(item);
             return (
-              <Card key={item.name} ref={(el) => observeItem(el, item.name)} className="hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 hover:-translate-y-1 border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm group overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none" />
-                <CardHeader className="pb-3 relative">
+              <Card key={item.name} ref={(el) => observeItem(el, item.name)} className="border border-slate-700 bg-slate-800 overflow-hidden">
+                <CardHeader className="pb-3">
                   <div className="flex items-start gap-3">
-                    <div className="shrink-0 size-16 rounded-lg overflow-hidden border border-slate-600/50 bg-slate-700/50 shadow-md">
+                    <div className="shrink-0 size-16 rounded-lg overflow-hidden border border-slate-600 bg-slate-700">
                       {imageUrl ? (
                         <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
                       ) : (
@@ -964,13 +954,13 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="relative">
+                <CardContent>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/30">
+                    <div className="flex items-center gap-2 bg-amber-900 px-3 py-1.5 rounded-lg border border-amber-700">
                       <Coins className="size-4 text-amber-400" />
                       <span className="font-bold text-amber-300">{price}</span>
                     </div>
-                    <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-amber-500/25">
+                    <Button size="sm" onClick={() => handlePurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50">
                       {purchasing === item.name ? "..." : "Buy"}
                     </Button>
                   </div>
@@ -982,7 +972,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
       )}
 
       {filteredItems.length === 0 && (
-        <div className="text-center py-24 text-slate-400 bg-gradient-to-br from-slate-800/40 to-slate-800/20 rounded-xl border border-dashed border-slate-700/50 shadow-inner">
+        <div className="text-center py-24 text-slate-400 bg-slate-800 rounded-xl border border-dashed border-slate-700">
           <Package className="size-16 mx-auto mb-4 text-slate-600 opacity-50" />
           <p className="text-lg font-semibold text-slate-300 mb-2">No items found</p>
           <p className="text-sm">Try adjusting your search or filter criteria</p>
@@ -1010,7 +1000,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
           >
             Previous
           </Button>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-600">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 border border-slate-600">
             <span className="text-slate-400 text-sm">Page</span>
             <span className="font-bold text-amber-400 text-lg">{currentPage}</span>
             <span className="text-slate-500">/</span>
@@ -1056,7 +1046,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
             {!loadingCards && archetypeCards.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {archetypeCards.map((card) => (
-                  <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors">
+                  <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors">
                     {card.card_images?.[0]?.image_url_small && (
                       <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
                         <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
@@ -1445,9 +1435,9 @@ function CollectionTab({ userId }: { userId: string }) {
 
   if (purchases.length === 0) {
     return (
-      <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+      <Card className="border border-slate-700 bg-slate-800  ">
         <CardContent className="py-16 text-center">
-          <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 size-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
+          <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 size-20 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-700">
             <ShoppingCart className="size-10 text-amber-400" />
           </div>
           <p className="text-lg font-semibold text-slate-200">You haven't purchased any items yet.</p>
@@ -1463,15 +1453,15 @@ function CollectionTab({ userId }: { userId: string }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <Card className="border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-amber-600/5 shadow-lg hover:shadow-amber-500/10 transition-all duration-300">
+        <Card className="border border-amber-600 bg-slate-800">
           <CardHeader>
             <CardTitle className="text-amber-400">Total Items</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">{purchases.length}</div>
+            <div className="text-4xl font-bold text-amber-400">{purchases.length}</div>
           </CardContent>
         </Card>
-        <Card className="border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
+        <Card className="border border-blue-600 bg-slate-800">
           <CardHeader>
             <CardTitle className="text-blue-400">Decks</CardTitle>
           </CardHeader>
@@ -1479,7 +1469,7 @@ function CollectionTab({ userId }: { userId: string }) {
             <div className="text-4xl font-bold text-blue-400">{decks.length}</div>
           </CardContent>
         </Card>
-        <Card className="border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-purple-500/5 shadow-lg hover:shadow-violet-500/10 transition-all duration-300">
+        <Card className="border border-violet-600 bg-slate-800">
           <CardHeader>
             <CardTitle className="text-violet-400">Staples</CardTitle>
           </CardHeader>
@@ -1491,26 +1481,26 @@ function CollectionTab({ userId }: { userId: string }) {
 
       {/* View Toggle */}
       <div className="flex gap-2">
-        <Button variant={activeView === "history" ? "default" : "outline"} onClick={() => setActiveView("history")} className={activeView === "history" ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold shadow-lg shadow-amber-500/25" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500/50 hover:text-amber-300 transition-all duration-200"}>
+        <Button variant={activeView === "history" ? "default" : "outline"} onClick={() => setActiveView("history")} className={activeView === "history" ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400"}>
           <History className="size-4 mr-2" />
           Purchase History
         </Button>
-        <Button variant={activeView === "allCards" ? "default" : "outline"} onClick={() => setActiveView("allCards")} className={activeView === "allCards" ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold shadow-lg shadow-amber-500/25" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500/50 hover:text-amber-300 transition-all duration-200"}>
+        <Button variant={activeView === "allCards" ? "default" : "outline"} onClick={() => setActiveView("allCards")} className={activeView === "allCards" ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400"}>
           <Layers className="size-4 mr-2" />
           All My Cards
         </Button>
       </div>
 
       {activeView === "history" && (
-        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+        <Card className="border border-slate-700 bg-slate-800">
           <CardHeader>
-            <CardTitle className="text-xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">Purchase History</CardTitle>
+            <CardTitle className="text-xl font-bold text-amber-400">Purchase History</CardTitle>
             <CardDescription className="text-slate-400">Click on an archetype name to view the cards in that package</CardDescription>
           </CardHeader>
           <CardContent>
             {/* Pagination Info */}
             {purchases.length > historyPerPage && (
-              <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-slate-700/30 border border-slate-600/50">
+              <div className="flex items-center justify-between mb-4 p-3 rounded-lg bg-slate-800 border border-slate-600">
                 <div className="flex items-center gap-2 text-sm">
                   <History className="size-4 text-amber-400" />
                   <span className="text-slate-400">Total Purchases:</span>
@@ -1563,7 +1553,7 @@ function CollectionTab({ userId }: { userId: string }) {
                     return new Date(ms).toLocaleDateString();
                   };
                   return (
-                    <TableRow key={purchase.id} className="border-slate-700/50 hover:bg-slate-700/30 transition-colors duration-200">
+                    <TableRow key={purchase.id} className="border-slate-700 hover:bg-slate-800 transition-colors duration-200">
                       <TableCell>
                         {isDeck ? (
                           <span className="font-semibold text-slate-100 cursor-pointer hover:text-amber-300 transition-colors flex items-center gap-1" onClick={() => handleArchetypeClick(purchase.item_name)} title="Click to view cards in this archetype">
@@ -1588,7 +1578,7 @@ function CollectionTab({ userId }: { userId: string }) {
       )}
 
       {activeView === "allCards" && (
-        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+        <Card className="border border-slate-700 bg-slate-800  ">
           <CardHeader>
             <CardTitle className="text-xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">All My Cards ({filteredOwnedCards.length}{filteredOwnedCards.length !== allOwnedCards.length ? ` of ${allOwnedCards.length}` : ""})</CardTitle>
             <CardDescription className="text-slate-400">All individual cards from your purchased archetypes and staples</CardDescription>
@@ -1596,15 +1586,15 @@ function CollectionTab({ userId }: { userId: string }) {
           <CardContent>
             {/* Filters and View Mode Toggle */}
             {!loadingAllCards && allOwnedCards.length > 0 && (
-              <div className="flex flex-col md:flex-row gap-3 mb-4 pb-4 border-b border-slate-700/50">
+              <div className="flex flex-col md:flex-row gap-3 mb-4 pb-4 border-b border-slate-700">
                 <Input
                   placeholder="Search cards..."
                   value={cardSearchTerm}
                   onChange={(e) => setCardSearchTerm(e.target.value)}
-                  className="w-full md:w-48 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20"
+                  className="w-full md:w-48 bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 "
                 />
                 <Select value={cardTypeFilter} onValueChange={(value) => setCardTypeFilter(value as CardTypeFilter)}>
-                  <SelectTrigger className="w-full md:w-32 bg-slate-800/50 border-slate-700 text-slate-100">
+                  <SelectTrigger className="w-full md:w-32 bg-slate-800 border-slate-700 text-slate-100">
                     <SelectValue placeholder="Card Type" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
@@ -1615,7 +1605,7 @@ function CollectionTab({ userId }: { userId: string }) {
                   </SelectContent>
                 </Select>
                 <Select value={archetypeFilter} onValueChange={setArchetypeFilter}>
-                  <SelectTrigger className="w-full md:w-40 bg-slate-800/50 border-slate-700 text-slate-100">
+                  <SelectTrigger className="w-full md:w-40 bg-slate-800 border-slate-700 text-slate-100">
                     <SelectValue placeholder="Archetype" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700 max-h-60">
@@ -1625,11 +1615,11 @@ function CollectionTab({ userId }: { userId: string }) {
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="flex items-center gap-0.5 border border-slate-600 rounded-md p-0.5 bg-slate-800/70 ml-auto">
-                  <Button variant="ghost" size="icon" onClick={() => setAllCardsViewMode("grid")} className={`size-8 ${allCardsViewMode === "grid" ? "bg-amber-500/30 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"}`} title="Grid View">
+                <div className="flex items-center gap-0.5 border border-slate-600 rounded-md p-0.5 bg-slate-800 ml-auto">
+                  <Button variant="ghost" size="icon" onClick={() => setAllCardsViewMode("grid")} className={`size-8 ${allCardsViewMode === "grid" ? "bg-amber-600 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700"}`} title="Grid View">
                     <LayoutGrid className="size-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setAllCardsViewMode("list")} className={`size-8 ${allCardsViewMode === "list" ? "bg-amber-500/30 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"}`} title="List View">
+                  <Button variant="ghost" size="icon" onClick={() => setAllCardsViewMode("list")} className={`size-8 ${allCardsViewMode === "list" ? "bg-amber-600 text-amber-400" : "text-slate-400 hover:text-slate-200 hover:bg-slate-700"}`} title="List View">
                     <List className="size-4" />
                   </Button>
                 </div>
@@ -1653,9 +1643,9 @@ function CollectionTab({ userId }: { userId: string }) {
             {!loadingAllCards && filteredOwnedCards.length > 0 && allCardsViewMode === "grid" && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredOwnedCards.map((card) => (
-                  <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30 transition-colors">
+                  <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-800 transition-colors">
                     {card.card_images?.[0]?.image_url_small && (
-                      <div className="w-full aspect-[3/4] rounded-lg overflow-hidden border border-slate-600/50 bg-slate-700/50 shadow-md mb-2">
+                      <div className="w-full aspect-[3/4] rounded-lg overflow-hidden border border-slate-600 bg-slate-700  mb-2">
                         <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
                       </div>
                     )}
@@ -1676,9 +1666,9 @@ function CollectionTab({ userId }: { userId: string }) {
             {!loadingAllCards && filteredOwnedCards.length > 0 && allCardsViewMode === "list" && (
               <div className="space-y-2">
                 {filteredOwnedCards.map((card) => (
-                  <div key={card.id} className="flex items-center gap-3 p-2 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30 transition-colors">
+                  <div key={card.id} className="flex items-center gap-3 p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-800 transition-colors">
                     {card.card_images?.[0]?.image_url_small && (
-                      <div className="shrink-0 size-12 rounded-lg overflow-hidden border border-slate-600/50 bg-slate-700/50 shadow-md">
+                      <div className="shrink-0 size-12 rounded-lg overflow-hidden border border-slate-600 bg-slate-700 ">
                         <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
                       </div>
                     )}
@@ -1719,7 +1709,7 @@ function CollectionTab({ userId }: { userId: string }) {
             {!loadingCards && archetypeCards.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {archetypeCards.map((card) => (
-                  <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 transition-colors">
+                  <div key={card.id} className="flex flex-col p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors">
                     {card.card_images?.[0]?.image_url_small && (
                       <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
                         <img src={card.card_images[0].image_url_small} alt={card.name} className="w-full h-full object-cover" loading="lazy" />
@@ -1749,10 +1739,10 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
       {/* Background pattern */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23fbbf24%22%20fill-opacity%3D%220.02%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50 pointer-events-none" />
 
-      <header className="bg-slate-900/80 backdrop-blur-md border-b border-rose-500/20 shadow-lg shadow-rose-500/5 sticky top-0 z-50 relative">
+      <header className="bg-slate-900/80  border-b border-rose-700  sticky top-0 z-50 relative">
         <div className="container mx-auto px-4 py-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="size-10 bg-gradient-to-br from-rose-500 to-rose-700 rounded-lg flex items-center justify-center shadow-lg shadow-rose-500/20">
+            <div className="size-10 bg-gradient-to-br from-rose-500 to-rose-700 rounded-lg flex items-center justify-center ">
               <span className="text-xl font-black text-white">A</span>
             </div>
             <div>
@@ -1760,7 +1750,7 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
               <p className="text-sm text-slate-400 font-medium">Welcome, <span className="text-rose-400">{user.username}</span> (Administrator)</p>
             </div>
           </div>
-          <Button variant="outline" onClick={onLogout} className="border-slate-700 text-slate-300 hover:bg-red-950/50 hover:text-red-400 hover:border-red-500/50 transition-all duration-200">
+          <Button variant="outline" onClick={onLogout} className="border-slate-700 text-slate-300 hover:bg-red-950/50 hover:text-red-400 hover:border-red-500/50 transition-colors">
             <LogOut className="size-4 mr-2" />
             Logout
           </Button>
@@ -1769,38 +1759,38 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
 
       <main className="container mx-auto px-4 py-8 relative">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 max-w-6xl h-auto md:h-12 bg-slate-800/50 backdrop-blur-sm shadow-lg border border-rose-500/20 p-1">
-            <TabsTrigger value="create-user" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 max-w-6xl h-auto md:h-12 bg-slate-800   border border-rose-700 p-1">
+            <TabsTrigger value="create-user" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <Users className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Create User</span>
               <span className="sm:hidden">Create</span>
             </TabsTrigger>
-            <TabsTrigger value="grant-coins" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+            <TabsTrigger value="grant-coins" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <Gift className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Grant Coins</span>
               <span className="sm:hidden">Grant</span>
             </TabsTrigger>
-            <TabsTrigger value="reset-password" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+            <TabsTrigger value="reset-password" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <KeyRound className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Reset Password</span>
               <span className="sm:hidden">Reset</span>
             </TabsTrigger>
-            <TabsTrigger value="coin-history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+            <TabsTrigger value="coin-history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <BarChart3 className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Coin History</span>
               <span className="sm:hidden">History</span>
             </TabsTrigger>
-            <TabsTrigger value="purchase-log" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+            <TabsTrigger value="purchase-log" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <ShoppingBag className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Purchase Log</span>
               <span className="sm:hidden">Purchases</span>
             </TabsTrigger>
-            <TabsTrigger value="archetype-cards" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+            <TabsTrigger value="archetype-cards" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <Layers className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Archetypes</span>
               <span className="sm:hidden">Archetypes</span>
             </TabsTrigger>
-            <TabsTrigger value="staples-manage" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-all duration-300 text-sm md:text-base">
+            <TabsTrigger value="staples-manage" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <Star className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Staples</span>
               <span className="sm:hidden">Staples</span>
@@ -1906,7 +1896,7 @@ function CreateUserTab() {
   }
 
   return (
-    <Card className="max-w-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+    <Card className="max-w-2xl border border-slate-700 bg-slate-800  ">
       <CardHeader>
         <CardTitle className="text-xl font-bold bg-gradient-to-r from-rose-400 to-rose-300 bg-clip-text text-transparent">Create New Player Account</CardTitle>
         <CardDescription className="text-base text-slate-400">Create a new player account with a temporary password</CardDescription>
@@ -1914,32 +1904,32 @@ function CreateUserTab() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+            <Alert variant="destructive" className="animate-in fade-in-50 duration-300  bg-red-950/50 border-red-500/50">
               <AlertDescription className="text-red-200">{error}</AlertDescription>
             </Alert>
           )}
           {success && (
-            <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 shadow-lg">
+            <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 ">
               <AlertDescription className="font-semibold">{success}</AlertDescription>
             </Alert>
           )}
 
           <div className="space-y-2">
             <Label htmlFor="create-username" className="font-semibold text-slate-300">Username</Label>
-            <Input id="create-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 focus:ring-rose-500/20" />
+            <Input id="create-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 " />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="create-password" className="font-semibold text-slate-300">Temporary Password</Label>
-            <Input id="create-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 focus:ring-rose-500/20" />
+            <Input id="create-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} className="transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 " />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="create-coins" className="font-semibold text-slate-300">Starting Coins</Label>
-            <Input id="create-coins" type="number" min="0" value={coins} onChange={(e) => setCoins(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 focus:ring-rose-500/20" />
+            <Input id="create-coins" type="number" min="0" value={coins} onChange={(e) => setCoins(e.target.value)} required disabled={isLoading} className="transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 " />
           </div>
 
-          <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-bold transition-all duration-300 shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40">
+          <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-bold transition-colors  hover:shadow-rose-500/40">
             {isLoading ? "Creating..." : "Create User"}
           </Button>
         </form>
@@ -2032,7 +2022,7 @@ function GrantCoinsTab() {
   }
 
   return (
-    <Card className="max-w-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+    <Card className="max-w-2xl border border-slate-700 bg-slate-800  ">
       <CardHeader>
         <CardTitle className="text-xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">Grant Coins to Player</CardTitle>
         <CardDescription className="text-base text-slate-400">Add coins to a player's account with a reason</CardDescription>
@@ -2040,12 +2030,12 @@ function GrantCoinsTab() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+            <Alert variant="destructive" className="animate-in fade-in-50 duration-300  bg-red-950/50 border-red-500/50">
               <AlertDescription className="text-red-200">{error}</AlertDescription>
             </Alert>
           )}
           {success && (
-            <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 shadow-lg">
+            <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 ">
               <AlertDescription className="font-semibold">{success}</AlertDescription>
             </Alert>
           )}
@@ -2054,7 +2044,7 @@ function GrantCoinsTab() {
             <Label className="font-semibold text-slate-300">Quick Presets</Label>
             <div className="flex flex-wrap gap-2">
               {presetReasons.map((preset) => (
-                <Button key={preset.label} type="button" variant="outline" size="sm" onClick={() => applyPreset(preset)} className="border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/50 transition-all duration-200 shadow-sm">
+                <Button key={preset.label} type="button" variant="outline" size="sm" onClick={() => applyPreset(preset)} className="border-amber-700 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/50 transition-colors ">
                   {preset.label} (+{preset.coins})
                 </Button>
               ))}
@@ -2063,20 +2053,20 @@ function GrantCoinsTab() {
 
           <div className="space-y-2">
             <Label htmlFor="grant-username" className="font-semibold text-slate-300">Username</Label>
-            <Input id="grant-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20" />
+            <Input id="grant-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 " />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="grant-amount" className="font-semibold text-slate-300">Amount</Label>
-            <Input id="grant-amount" type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20" />
+            <Input id="grant-amount" type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} required disabled={isLoading} className="transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 " />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="grant-reason" className="font-semibold text-slate-300">Reason</Label>
-            <Input id="grant-reason" type="text" value={reason} onChange={(e) => setReason(e.target.value)} required disabled={isLoading} placeholder="e.g., Tournament winner" className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20" />
+            <Input id="grant-reason" type="text" value={reason} onChange={(e) => setReason(e.target.value)} required disabled={isLoading} placeholder="e.g., Tournament winner" className="transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 " />
           </div>
 
-          <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold transition-all duration-300 shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40">
+          <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-bold transition-colors  ">
             {isLoading ? "Granting..." : "Grant Coins"}
           </Button>
         </form>
@@ -2126,7 +2116,7 @@ function ResetPasswordTab() {
   }
 
   return (
-    <Card className="max-w-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+    <Card className="max-w-2xl border border-slate-700 bg-slate-800  ">
       <CardHeader>
         <CardTitle className="text-xl font-bold bg-gradient-to-r from-rose-400 to-rose-300 bg-clip-text text-transparent">Reset Player Password</CardTitle>
         <CardDescription className="text-base text-slate-400">Change a player's password</CardDescription>
@@ -2134,27 +2124,27 @@ function ResetPasswordTab() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+            <Alert variant="destructive" className="animate-in fade-in-50 duration-300  bg-red-950/50 border-red-500/50">
               <AlertDescription className="text-red-200">{error}</AlertDescription>
             </Alert>
           )}
           {success && (
-            <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 shadow-lg">
+            <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 ">
               <AlertDescription className="font-semibold">{success}</AlertDescription>
             </Alert>
           )}
 
           <div className="space-y-2">
             <Label htmlFor="reset-username" className="font-semibold text-slate-300">Username</Label>
-            <Input id="reset-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 focus:ring-rose-500/20" />
+            <Input id="reset-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 " />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="reset-password" className="font-semibold text-slate-300">New Password</Label>
-            <Input id="reset-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required disabled={isLoading} className="transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 focus:ring-rose-500/20" />
+            <Input id="reset-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required disabled={isLoading} className="transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-rose-500 " />
           </div>
 
-          <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-bold transition-all duration-300 shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40">
+          <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-bold transition-colors  hover:shadow-rose-500/40">
             {isLoading ? "Resetting..." : "Reset Password"}
           </Button>
         </form>
@@ -2199,7 +2189,7 @@ function CoinHistoryTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="max-w-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+      <Card className="max-w-2xl border border-slate-700 bg-slate-800  ">
         <CardHeader>
           <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">View Player Coin History</CardTitle>
           <CardDescription className="text-base text-slate-400">Search for a player to view their complete coin transaction log</CardDescription>
@@ -2207,14 +2197,14 @@ function CoinHistoryTab() {
         <CardContent>
           <form onSubmit={handleSearch} className="space-y-4">
             {error && (
-              <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+              <Alert variant="destructive" className="animate-in fade-in-50 duration-300  bg-red-950/50 border-red-500/50">
                 <AlertDescription className="text-red-200">{error}</AlertDescription>
               </Alert>
             )}
 
             <div className="flex gap-2">
-              <Input type="text" placeholder="Enter username..." value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="flex-1 transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20 shadow-sm" />
-              <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40">
+              <Input type="text" placeholder="Enter username..." value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="flex-1 transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20 " />
+              <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold transition-colors  hover:shadow-blue-500/40">
                 {isLoading ? "Searching..." : "Search"}
               </Button>
             </div>
@@ -2223,7 +2213,7 @@ function CoinHistoryTab() {
       </Card>
 
       {logs.length > 0 && (
-        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg animate-in fade-in-50 duration-300">
+        <Card className="border border-slate-700 bg-slate-800   animate-in fade-in-50 duration-300">
           <CardHeader>
             <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">Coin Transaction History for {username}</CardTitle>
           </CardHeader>
@@ -2246,7 +2236,7 @@ function CoinHistoryTab() {
                     return new Date(ms).toLocaleString();
                   };
                   return (
-                  <TableRow key={log.id} className="border-slate-700/50 hover:bg-slate-700/30 transition-colors duration-200">
+                  <TableRow key={log.id} className="border-slate-700 hover:bg-slate-800 transition-colors duration-200">
                     <TableCell className="text-slate-400">{formatLogDate(log.created_at)}</TableCell>
                     <TableCell>
                       <span className={log.amount >= 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
@@ -2370,7 +2360,7 @@ function PurchaseLogTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="max-w-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+      <Card className="max-w-2xl border border-slate-700 bg-slate-800  ">
         <CardHeader>
           <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-300 bg-clip-text text-transparent">Purchase Log</CardTitle>
           <CardDescription className="text-base text-slate-400">View all player purchases or search by username</CardDescription>
@@ -2396,14 +2386,14 @@ function PurchaseLogTab() {
           {searchMode === "user" && (
             <form onSubmit={handleSearch} className="space-y-4">
               {error && (
-                <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+                <Alert variant="destructive" className="animate-in fade-in-50 duration-300  bg-red-950/50 border-red-500/50">
                   <AlertDescription className="text-red-200">{error}</AlertDescription>
                 </Alert>
               )}
 
               <div className="flex gap-2">
-                <Input type="text" placeholder="Enter username..." value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="flex-1 transition-all duration-200 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 shadow-sm" />
-                <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40">
+                <Input type="text" placeholder="Enter username..." value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="flex-1 transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 " />
+                <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold transition-colors  shadow-purple-500/25 hover:shadow-purple-500/40">
                   {isLoading ? "Searching..." : "Search"}
                 </Button>
               </div>
@@ -2411,7 +2401,7 @@ function PurchaseLogTab() {
           )}
 
           {searchMode === "all" && error && (
-            <Alert variant="destructive" className="animate-in fade-in-50 duration-300 shadow-lg bg-red-950/50 border-red-500/50">
+            <Alert variant="destructive" className="animate-in fade-in-50 duration-300  bg-red-950/50 border-red-500/50">
               <AlertDescription className="text-red-200">{error}</AlertDescription>
             </Alert>
           )}
@@ -2419,7 +2409,7 @@ function PurchaseLogTab() {
       </Card>
 
       {isLoading && searchMode === "all" && (
-        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+        <Card className="border border-slate-700 bg-slate-800  ">
           <CardContent className="py-8 text-center text-slate-400">
             Loading purchases...
           </CardContent>
@@ -2427,7 +2417,7 @@ function PurchaseLogTab() {
       )}
 
       {!isLoading && purchases.length > 0 && (
-        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg animate-in fade-in-50 duration-300">
+        <Card className="border border-slate-700 bg-slate-800   animate-in fade-in-50 duration-300">
           <CardHeader>
             <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-300 bg-clip-text text-transparent">
               {searchMode === "user" ? `Purchases by ${username}` : "All Purchases"} ({purchases.length})
@@ -2445,7 +2435,7 @@ function PurchaseLogTab() {
               </TableHeader>
               <TableBody>
                 {purchases.map((purchase) => (
-                  <TableRow key={purchase.id} className="border-slate-700/50 hover:bg-slate-700/30 transition-colors duration-200">
+                  <TableRow key={purchase.id} className="border-slate-700 hover:bg-slate-800 transition-colors duration-200">
                     <TableCell className="text-slate-400">{formatDate(purchase.bought_at)}</TableCell>
                     <TableCell className="text-amber-400 font-medium">{purchase.username}</TableCell>
                     <TableCell className="text-slate-200 font-medium">{purchase.item_name}</TableCell>
@@ -2467,7 +2457,7 @@ function PurchaseLogTab() {
       )}
 
       {!isLoading && purchases.length === 0 && searchMode === "all" && (
-        <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+        <Card className="border border-slate-700 bg-slate-800  ">
           <CardContent className="py-8 text-center text-slate-400">
             No purchases found.
           </CardContent>
@@ -2884,7 +2874,7 @@ function ArchetypeCardsTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+      <Card className="border border-slate-700 bg-slate-800  ">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl font-bold bg-gradient-to-r from-rose-400 to-amber-400 bg-clip-text text-transparent">
             <Layers className="size-6 text-rose-400" />
@@ -2905,7 +2895,7 @@ function ArchetypeCardsTab() {
                   placeholder="Search archetypes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                  className="flex-1 bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500"
                 />
               </div>
               
@@ -2918,10 +2908,10 @@ function ArchetypeCardsTab() {
                       setSelectedArchetype(archetype.name);
                       loadArchetypeCards(archetype.name);
                     }}
-                    className={`w-full flex items-center gap-2 p-2 rounded-lg border transition-all text-left ${
+                    className={`w-full flex items-center gap-2 p-2 rounded-lg border transition-colors text-left ${
                       selectedArchetype === archetype.name
                         ? "border-rose-500/50 bg-rose-950/30 text-rose-300"
-                        : "border-slate-700/50 bg-slate-800/30 text-slate-300 hover:bg-slate-700/30"
+                        : "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-800"
                     }`}
                   >
                     {getArchetypeImageUrl(archetype.name) ? (
@@ -2996,7 +2986,7 @@ function ArchetypeCardsTab() {
                             value={tempName}
                             onChange={(e) => setTempName(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') saveArchetypeName(); if (e.key === 'Escape') setEditingName(false); }}
-                            className="w-48 bg-slate-800/50 border-amber-500 text-amber-400 font-bold"
+                            className="w-48 bg-slate-800 border-amber-500 text-amber-400 font-bold"
                             autoFocus
                           />
                           <Button size="sm" onClick={saveArchetypeName} className="bg-emerald-600 hover:bg-emerald-700">
@@ -3077,7 +3067,7 @@ function ArchetypeCardsTab() {
                   
                   {/* Image Search Modal */}
                   {imageSearchOpen && (
-                    <div className="p-4 rounded-lg border border-amber-500/30 bg-slate-800/80">
+                    <div className="p-4 rounded-lg border border-amber-700 bg-slate-800/80">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-semibold text-amber-400 flex items-center gap-2">
                           <Image className="size-4" />
@@ -3098,7 +3088,7 @@ function ArchetypeCardsTab() {
                           value={imageSearchQuery}
                           onChange={(e) => setImageSearchQuery(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') searchArchetypeImages(); }}
-                          className="flex-1 bg-slate-800/50 border-slate-700 text-slate-100"
+                          className="flex-1 bg-slate-800 border-slate-700 text-slate-100"
                           autoFocus
                         />
                         <Button onClick={searchArchetypeImages} disabled={imageSearchLoading} className="bg-amber-500 hover:bg-amber-600 text-slate-900">
@@ -3143,7 +3133,7 @@ function ArchetypeCardsTab() {
                   )}
 
                   {/* Add Card Section */}
-                  <div className="p-3 rounded-lg border border-slate-700/50 bg-slate-800/30">
+                  <div className="p-3 rounded-lg border border-slate-700 bg-slate-800">
                     <div className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
                       <Plus className="size-4" />
                       Add Card to Archetype
@@ -3155,7 +3145,7 @@ function ArchetypeCardsTab() {
                         value={cardSearchQuery}
                         onChange={(e) => setCardSearchQuery(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') searchCards(cardSearchQuery); }}
-                        className="flex-1 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                        className="flex-1 bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                       <Button
                         onClick={() => searchCards(cardSearchQuery)}
@@ -3181,7 +3171,7 @@ function ArchetypeCardsTab() {
                                 className={`flex items-center gap-2 p-2 rounded border ${
                                   isInArchetype
                                     ? 'border-emerald-500/50 bg-emerald-950/20'
-                                    : 'border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30'
+                                    : 'border-slate-700 bg-slate-800 hover:bg-slate-800'
                                 }`}
                               >
                                 {card.card_images?.[0]?.image_url_small && (
@@ -3230,7 +3220,7 @@ function ArchetypeCardsTab() {
                           {archetypeCards.map((card) => (
                             <div
                               key={card.id || card.name}
-                              className="flex items-center gap-2 p-2 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30 group"
+                              className="flex items-center gap-2 p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-800 group"
                             >
                               {card.card_images?.[0]?.image_url_small && (
                                 <img
@@ -3415,7 +3405,7 @@ function StaplesManageTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm shadow-lg">
+      <Card className="border border-slate-700 bg-slate-800  ">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl font-bold bg-gradient-to-r from-rose-400 to-amber-400 bg-clip-text text-transparent">
             <Star className="size-6 text-amber-400" />
@@ -3442,7 +3432,7 @@ function StaplesManageTab() {
                     key={r}
                     type="button"
                     onClick={() => setSelectedRating(r)}
-                    className={`px-3 py-1 rounded text-sm font-bold border transition-all ${
+                    className={`px-3 py-1 rounded text-sm font-bold border transition-colors ${
                       selectedRating === r
                         ? getRatingBadgeStyle(r) + " ring-2 ring-white/30"
                         : "bg-slate-700 text-slate-400 border-slate-600 hover:bg-slate-600"
@@ -3461,7 +3451,7 @@ function StaplesManageTab() {
                   value={cardSearchQuery}
                   onChange={(e) => setCardSearchQuery(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') searchCards(); }}
-                  className="flex-1 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                  className="flex-1 bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500"
                 />
                 <Button
                   onClick={searchCards}
@@ -3483,7 +3473,7 @@ function StaplesManageTab() {
                     return (
                       <div
                         key={card.id}
-                        className="flex items-center gap-2 p-2 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30"
+                        className="flex items-center gap-2 p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-800"
                       >
                         {card.card_images?.[0]?.image_url_small && (
                           <img
@@ -3549,7 +3539,7 @@ function StaplesManageTab() {
                   placeholder="Filter staples..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-slate-800/50 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                  className="flex-1 bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500"
                 />
               </div>
               
@@ -3558,7 +3548,7 @@ function StaplesManageTab() {
                 {filteredStaples.map((staple) => (
                   <div
                     key={staple.name}
-                    className="flex items-center gap-2 p-2 rounded-lg border border-slate-700/50 bg-slate-800/30 hover:bg-slate-700/30 group"
+                    className="flex items-center gap-2 p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-800 group"
                   >
                     {staple.imageUrl ? (
                       <img
@@ -3579,7 +3569,7 @@ function StaplesManageTab() {
                           type="text"
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          className="w-32 h-7 text-xs bg-slate-800/50 border-amber-500"
+                          className="w-32 h-7 text-xs bg-slate-800 border-amber-500"
                         />
                         <select
                           value={editRating}
@@ -3609,7 +3599,7 @@ function StaplesManageTab() {
                         <button
                           type="button"
                           onClick={() => startEditStaple(staple)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-amber-500/20 text-slate-400 hover:text-amber-400"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-amber-900 text-slate-400 hover:text-amber-400"
                           title="Edit staple"
                         >
                           <Edit3 className="size-4" />
