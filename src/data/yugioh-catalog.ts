@@ -498,4 +498,43 @@ export const STAPLE_CARDS: CatalogItem[] = [
   { name: "Rivalry of Warlords", rating: "S", price: 200, imageUrl: getCardImageUrl(90846359) },
   { name: "Gozen Match", rating: "S", price: 200, imageUrl: getCardImageUrl(53334471) },
   { name: "Skill Drain", rating: "S", price: 200, imageUrl: getCardImageUrl(82732705) },
+  { name: "Summon Limit", rating: "A", price: 100, imageUrl: getCardImageUrl(23516703) },
+  { name: "Macro Cosmos", rating: "S", price: 200, imageUrl: getCardImageUrl(30241314) },
+  { name: "Dimensional Fissure", rating: "A", price: 100, imageUrl: getCardImageUrl(81674782) },
+  
+  // Additional Hand Traps
+  { name: "PSY-Framegear Gamma", rating: "S", price: 200, imageUrl: getCardImageUrl(38814750) },
+  { name: "Fantastical Dragon Phantazmay", rating: "A", price: 100, imageUrl: getCardImageUrl(65305468) },
+  { name: "Triple Tactics Talent", rating: "S", price: 200, imageUrl: getCardImageUrl(25311006) },
+  { name: "Triple Tactics Thrust", rating: "S", price: 200, imageUrl: getCardImageUrl(21249921) },
+  
+  // Additional Board Breakers
+  { name: "Interrupted Kaiju Slumber", rating: "S", price: 200, imageUrl: getCardImageUrl(99330325) },
+  { name: "Lava Golem", rating: "A", price: 100, imageUrl: getCardImageUrl(102380) },
+  
+  // Draw/Search Power
+  { name: "Pot of Extravagance", rating: "S", price: 200, imageUrl: getCardImageUrl(49238328) },
+  { name: "Pot of Avarice", rating: "B", price: 50, imageUrl: getCardImageUrl(67169062) },
+  { name: "Pot of Greed", rating: "S+", price: 400, imageUrl: getCardImageUrl(55144522) },
+  { name: "Allure of Darkness", rating: "A", price: 100, imageUrl: getCardImageUrl(1475311) },
+  { name: "Reinforcement of the Army", rating: "S", price: 200, imageUrl: getCardImageUrl(32807846) },
+  { name: "Gold Sarcophagus", rating: "A", price: 100, imageUrl: getCardImageUrl(75500286) },
+  { name: "Emergency Teleport", rating: "A", price: 100, imageUrl: getCardImageUrl(67723438) },
+  { name: "Upstart Goblin", rating: "B", price: 50, imageUrl: getCardImageUrl(70368879) },
+  
+  // Extra Deck Staples
+  { name: "Apollousa, Bow of the Goddess", rating: "S", price: 200, imageUrl: getCardImageUrl(98431356) },
+  { name: "Accesscode Talker", rating: "S", price: 200, imageUrl: getCardImageUrl(86066372) },
+  { name: "S:P Little Knight", rating: "S+", price: 400, imageUrl: getCardImageUrl(37313786) },
+  { name: "Underworld Goddess of the Closed World", rating: "S", price: 200, imageUrl: getCardImageUrl(98127546) },
+  { name: "Knightmare Phoenix", rating: "A", price: 100, imageUrl: getCardImageUrl(2857636) },
+  { name: "Knightmare Cerberus", rating: "A", price: 100, imageUrl: getCardImageUrl(75452921) },
+  { name: "I:P Masquerena", rating: "S", price: 200, imageUrl: getCardImageUrl(65741786) },
+  { name: "Striker Dragon", rating: "S", price: 200, imageUrl: getCardImageUrl(73539069) },
+  { name: "Baronne de Fleur", rating: "S+", price: 400, imageUrl: getCardImageUrl(84815190) },
+  { name: "Chaos Angel", rating: "S", price: 200, imageUrl: getCardImageUrl(60003140) },
+  { name: "Divine Arsenal AA-ZEUS - Sky Thunder", rating: "S", price: 200, imageUrl: getCardImageUrl(90448279) },
+  { name: "Borreload Savage Dragon", rating: "S", price: 200, imageUrl: getCardImageUrl(95472621) },
+  { name: "Crystal Wing Synchro Dragon", rating: "A", price: 100, imageUrl: getCardImageUrl(50954680) },
+  { name: "Crystron Halqifibrax", rating: "S+", price: 400, imageUrl: getCardImageUrl(50588353) },
 ];
