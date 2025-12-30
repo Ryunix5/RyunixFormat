@@ -18,6 +18,7 @@ import { PurchaseORM, type PurchaseModel, PurchaseItemType } from "@/sdk/databas
 import { CoinLogORM, type CoinLogModel } from "@/sdk/database/orm/orm_coin_log";
 import { UserORM, type UserModel } from "@/sdk/database/orm/orm_user";
 import { BanlistORM } from "@/sdk/database/orm/orm_banlist";
+import type { BanStatus } from "@/data/banlist";
 import { ARCHETYPE_DECKS, STAPLE_CARDS, type CatalogItem, type MetaRating, META_RATING_PRICES } from "@/data/yugioh-catalog";
 import { hashPassword, verifyPassword, createAuthToken, getAuthToken, setAuthToken, clearAuthToken } from "@/lib/auth";
 import { getUserByUsername } from "@/lib/db";
@@ -418,8 +419,8 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
     return cardModifications[item.name]?.price ?? item.price;
   }, []);
 
-  const getBanStatus = useCallback((cardName: string) => {
-    return banlist[cardName]?.banStatus ?? 'unlimited';
+  const getBanStatus = useCallback((cardName: string): BanStatus => {
+    return (banlist[cardName]?.banStatus as BanStatus) ?? 'unlimited';
   }, []);
 
   const getModifiedImage = useCallback((item: CatalogItem): string | undefined => {
@@ -3791,6 +3792,11 @@ function StaplesManageTab() {
   // Listen for banlist changes
   const _banlistVersion = useBanlistVersion();
   
+  // Get ban status for a card
+  const getBanStatus = useCallback((cardName: string): BanStatus => {
+    return (banlist[cardName]?.banStatus as BanStatus) ?? 'unlimited';
+  }, [_banlistVersion]);
+  
   // Editing staple state
   const [editingStaple, setEditingStaple] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -3808,11 +3814,6 @@ function StaplesManageTab() {
       s.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery, effectiveStaples]);
-  
-  // Get ban status for a card
-  const getBanStatus = useCallback((cardName: string) => {
-    return banlist[cardName]?.banStatus ?? 'unlimited';
-  }, [_banlistVersion]);
 
   // Rating style helper
   function getRatingBadgeStyle(rating: string): string {
