@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
@@ -414,7 +414,15 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
   };
 
   // Use effective staples list (includes admin additions/removals)
-  const items = category === "decks" ? ARCHETYPE_DECKS : getEffectiveStaples();
+  const rawItems = category === "decks" ? ARCHETYPE_DECKS : getEffectiveStaples();
+  
+  // Filter out removed archetypes (marked as is_removed in card modifications)
+  const items = useMemo(() => {
+    return rawItems.filter(item => {
+      const mod = cardModifications[item.name];
+      return !mod || !mod.is_removed;
+    });
+  }, [rawItems, cardModifications]);
   
   // Memoize filtered items for performance
   const filteredItems = useMemo(() => {
@@ -1979,7 +1987,7 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
 
       <main className="container mx-auto px-4 py-8 relative">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 max-w-6xl h-auto md:h-12 bg-slate-800   border border-rose-700 p-1">
+          <TabsList className="grid w-full grid-cols-4 md:grid-cols-8 max-w-6xl h-auto md:h-12 bg-slate-800   border border-rose-700 p-1">
             <TabsTrigger value="create-user" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <Users className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Create User</span>
@@ -1994,6 +2002,11 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
               <KeyRound className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Reset Password</span>
               <span className="sm:hidden">Reset</span>
+            </TabsTrigger>
+            <TabsTrigger value="delete-archetype" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
+              <Trash2 className="size-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Delete Deck</span>
+              <span className="sm:hidden">Delete</span>
             </TabsTrigger>
             <TabsTrigger value="coin-history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <BarChart3 className="size-4 mr-1 md:mr-2" />
@@ -2027,6 +2040,10 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
 
           <TabsContent value="reset-password" className="mt-6 animate-in fade-in-50 duration-300">
             <ResetPasswordTab />
+          </TabsContent>
+
+          <TabsContent value="delete-archetype" className="mt-6 animate-in fade-in-50 duration-300">
+            <DeleteArchetypeTab />
           </TabsContent>
 
           <TabsContent value="coin-history" className="mt-6 animate-in fade-in-50 duration-300">
@@ -2373,6 +2390,158 @@ function ResetPasswordTab() {
   );
 }
 
+function DeleteArchetypeTab() {
+  const [selectedArchetype, setSelectedArchetype] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [, forceUpdate] = useState({});
+
+  // Subscribe to modification changes
+  useEffect(() => {
+    const listener = () => forceUpdate({});
+    modificationListeners.add(listener);
+    return () => {
+      modificationListeners.delete(listener);
+    };
+  }, []);
+
+  const archetype = ARCHETYPE_DECKS.find(a => a.name === selectedArchetype);
+  
+  // Filter out already-deleted archetypes
+  const availableArchetypes = ARCHETYPE_DECKS.filter(arch => {
+    const mod = cardModifications[arch.name];
+    return !mod || !mod.is_removed;
+  });
+
+  async function handleDelete() {
+    setError("");
+    setSuccess("");
+    setIsLoading(true);
+    setShowConfirm(false);
+
+    try {
+      // Mark as removed in global state
+      if (!cardModifications[selectedArchetype]) {
+        cardModifications[selectedArchetype] = {};
+      }
+      cardModifications[selectedArchetype].is_removed = true;
+      
+      // Persist to database
+      await persistModificationsToDb();
+      
+      // Notify all components to update
+      notifyModificationChange();
+
+      setSuccess(`Archetype "${selectedArchetype}" has been deleted and will no longer appear in the catalog!`);
+      setSelectedArchetype("");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to delete archetype. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="max-w-2xl border border-slate-700 bg-slate-800  ">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold bg-gradient-to-r from-rose-400 to-rose-300 bg-clip-text text-transparent">Delete Archetype from Catalog</CardTitle>
+          <CardDescription className="text-base text-slate-400">Remove an archetype deck from the catalog (affects all users)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-5">
+            {error && (
+              <Alert variant="destructive" className="animate-in fade-in-50 duration-300  bg-red-950/50 border-red-500/50">
+                <AlertDescription className="text-red-200">{error}</AlertDescription>
+              </Alert>
+            )}
+            {success && (
+              <Alert className="animate-in fade-in-50 duration-300 bg-emerald-950/50 border border-emerald-500/50 text-emerald-200 ">
+                <AlertDescription className="font-semibold">{success}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="archetype-select" className="font-semibold text-slate-300">Select Archetype</Label>
+              <select
+                id="archetype-select"
+                value={selectedArchetype}
+                onChange={(e) => setSelectedArchetype(e.target.value)}
+                disabled={isLoading}
+                className="w-full px-3 py-2 rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-colors"
+              >
+                <option value="">-- Choose an archetype --</option>
+                {availableArchetypes.map((arch) => (
+                  <option key={arch.name} value={arch.name}>
+                    {arch.name} ({arch.rating} - {arch.price} coins)
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-400 mt-1">
+                {availableArchetypes.length} of {ARCHETYPE_DECKS.length} archetypes available
+              </p>
+            </div>
+
+            {archetype && (
+              <div className="p-4 bg-slate-900 border border-slate-700 rounded-md space-y-2">
+                <p className="text-sm text-slate-400">Preview:</p>
+                <div className="flex items-center gap-4">
+                  <img src={archetype.imageUrl} alt={archetype.name} className="w-24 h-auto rounded-md border border-slate-600" />
+                  <div>
+                    <p className="font-bold text-lg text-slate-100">{archetype.name}</p>
+                    <p className="text-slate-400">Rating: <span className="font-semibold">{archetype.rating}</span></p>
+                    <p className="text-slate-400">Price: <span className="font-semibold">{archetype.price} coins</span></p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Button
+              onClick={() => setShowConfirm(true)}
+              disabled={!selectedArchetype || isLoading}
+              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold transition-colors"
+            >
+              {isLoading ? "Deleting..." : "Delete Archetype"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent className="bg-slate-800 border border-slate-700 text-slate-100">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-rose-400">Confirm Deletion</DialogTitle>
+            <DialogDescription className="text-slate-300">
+              Are you sure you want to delete <span className="font-bold text-rose-300">"{selectedArchetype}"</span> from the catalog?
+              <br /><br />
+              This will remove it from the store for all users. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirm(false)}
+              className="border-slate-600 hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDelete}
+              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+            >
+              Yes, Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function CoinHistoryTab() {
   const [username, setUsername] = useState("");
   const [logs, setLogs] = useState<CoinLogModel[]>([]);
@@ -2689,7 +2858,7 @@ function PurchaseLogTab() {
 
 // Local state for card modifications - persisted to Supabase via CardModificationsORM
 // Note: customCards now stores full card objects so players can immediately see admin-added cards
-const cardModifications: Record<string, { rating?: MetaRating; price?: number; displayName?: string; imageUrl?: string; customCards?: Array<{ name: string; data?: any }> }> = {};
+const cardModifications: Record<string, { rating?: MetaRating; price?: number; displayName?: string; imageUrl?: string; customCards?: Array<{ name: string; data?: any }>; is_removed?: boolean }> = {};
 
 // Module-level storage for custom staples (persisted to same DB table)
 const customStaples: Array<{ name: string; rating: MetaRating; price: number; imageUrl?: string }> = [];
@@ -2726,6 +2895,29 @@ async function persistModificationsToDb() {
     }
   } catch (e) {
     console.error('Failed to persist modifications to DB', e);
+  }
+}
+
+// Update catalog file with new archetype rating/price
+async function updateCatalogFile(archetypeName: string, newRating: MetaRating, newPrice: number) {
+  try {
+    // Trigger the sync script via a simple HTTP request to a local endpoint
+    // This allows us to update the file system from the browser
+    const response = await fetch('/api/update-catalog', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ archetypeName, rating: newRating, price: newPrice })
+    });
+    
+    if (response.ok) {
+      console.log(`✅ Updated ${archetypeName} in yugioh-catalog.ts`);
+    } else {
+      // Fallback: just persist to DB
+      console.warn('Could not update catalog file, using database only');
+    }
+  } catch (e) {
+    // If the API endpoint doesn't exist, that's fine - changes are already in DB
+    console.log('Catalog file update skipped (database only)');
   }
 }
 
@@ -3240,11 +3432,13 @@ function ArchetypeCardsTab() {
                             const mod = cardModifications[selectedArchetype];
                             return mod?.rating || archetype?.rating || 'C';
                           })()} 
-                          onValueChange={(newRating: MetaRating) => {
+                          onValueChange={async (newRating: MetaRating) => {
                             const archetype = ARCHETYPE_DECKS.find(a => a.name === selectedArchetype);
                             if (!archetype) return;
                             
                             const newPrice = META_RATING_PRICES[newRating];
+                            
+                            // Update in-memory cardModifications
                             const mod = cardModifications[selectedArchetype] || {};
                             cardModifications[selectedArchetype] = {
                               ...mod,
@@ -3252,7 +3446,22 @@ function ArchetypeCardsTab() {
                               price: newPrice
                             };
                             
+                            // Update the archetype in ARCHETYPE_DECKS array
+                            const idx = ARCHETYPE_DECKS.findIndex(a => a.name === selectedArchetype);
+                            if (idx >= 0) {
+                              ARCHETYPE_DECKS[idx] = {
+                                ...ARCHETYPE_DECKS[idx],
+                                rating: newRating,
+                                price: newPrice
+                              };
+                            }
+                            
+                            // Generate updated catalog file content
+                            await updateCatalogFile(selectedArchetype, newRating, newPrice);
+                            
                             notifyModificationChange();
+                            setSuccessMessage(`Rating changed to ${newRating} (${newPrice} coins)`);
+                            setTimeout(() => setSuccessMessage(""), 2000);
                           }}
                         >
                           <SelectTrigger className="w-16 h-7 bg-slate-800 border-slate-600 text-xs">

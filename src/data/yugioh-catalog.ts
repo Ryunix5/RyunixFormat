@@ -304,7 +304,6 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Runick", rating: "A", price: 100, imageUrl: getCardImageUrl(47219274) }, // Hugin the Runick Wings
   { name: "Ryu-Ge", rating: "B", price: 50, imageUrl: getCardImageUrl(92487128) }, // Sosei Ryu-Ge Mistva
   { name: "Ryzeal", rating: "B", price: 50, imageUrl: getCardImageUrl(34909328) }, // Ryzeal Detonator
-  { name: "Sangen", rating: "F", price: 0, imageUrl: getCardImageUrl(18969888) }, // Sangenpai Transcendent Dragion
   { name: "S-Force", rating: "C", price: 25, imageUrl: getCardImageUrl(37629703) }, // S-Force Chase
   { name: "Salamangreat", rating: "A", price: 100, imageUrl: getCardImageUrl(38784726) }, // Salamangreat Balelynx
   { name: "Scareclaw", rating: "A", price: 100, imageUrl: getCardImageUrl(46877100) }, // Scareclaw Tri-Heart
