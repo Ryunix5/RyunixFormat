@@ -39,16 +39,7 @@ export default defineConfig({
 		chunkSizeWarningLimit: 1500,
 		rollupOptions: {
 			output: {
-				manualChunks: (id) => {
-					// Keep all ORM modules together to avoid cross-chunk import issues
-					if (id.includes('/src/sdk/database/orm/') || id.includes('\\src\\sdk\\database\\orm\\')) {
-						return 'sdk-orm';
-					}
-					// Also keep entire SDK together to avoid cross-chunk issues
-					if (id.includes('/src/sdk/') || id.includes('\\src\\sdk\\')) {
-						return 'sdk';
-					}
-				},
+				manualChunks: undefined,
 			},
 		},
 	},

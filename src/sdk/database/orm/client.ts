@@ -1,5 +1,6 @@
 import { authApi } from "@/lib/auth-integration";
 import { DataType, Direction, SimpleSelector } from "./common";
+import { SupabaseDataStoreClient } from "./supabaseAdapter";
 import type {
   Page,
   Format,
@@ -62,7 +63,7 @@ export class DataStoreClient {
 
   private async request<T>(endpoint: string, data: unknown): Promise<T> {
     // Fully switch to Supabase: always delegate to the adapter.
-    const sup = (await import("./supabaseAdapter")).SupabaseDataStoreClient.getInstance();
+    const sup = SupabaseDataStoreClient.getInstance();
     switch (endpoint) {
       case "/data/store/v1/all":
         return (await sup.all(data as any)) as unknown as T;
