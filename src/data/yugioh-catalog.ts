@@ -315,7 +315,7 @@ export const ARCHETYPE_DECKS: CatalogItem[] = [
   { name: "Sinful Spoils", rating: "S", price: 200, imageUrl: getCardImageUrl(80845034) }, // WANTED: Seeker of Sinful Spoils
   { name: "Six Samurai", rating: "C", price: 25, imageUrl: getCardImageUrl(2511717) }, // Legendary Six Samurai - Shi En
   { name: "Skull Servant", rating: "C", price: 25, imageUrl: getCardImageUrl(32274490) }, // King of the Skull Servants
-  { name: "Sky Striker", rating: "A", price: 100, imageUrl: getCardImageUrl(63288573) }, // Sky Striker Ace - Raye
+  { name: "Sky Striker", rating: "S", price: 200, imageUrl: getCardImageUrl(63288573) }, // Sky Striker Ace - Raye
   { name: "Snake-Eye", rating: "S", price: 200, imageUrl: getCardImageUrl(53639887) }, // Snake-Eye Ash
   { name: "Solfachord", rating: "C", price: 25, imageUrl: getCardImageUrl(80776622) }, // DoReMi Solfachord Coolia
   { name: "Speedroid", rating: "B", price: 50, imageUrl: getCardImageUrl(85852291) }, // Crystal Wing Synchro Dragon
