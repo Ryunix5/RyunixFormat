@@ -222,11 +222,11 @@ function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-900">
       <Card className="w-full max-w-md border border-slate-700 bg-slate-800">
-        <CardHeader className="space-y-2 pb-6">
-          <div className="flex items-center justify-center gap-4 mb-2">
-            <img src="/logo.svg" alt="Yu-Gi-Oh!" className="h-12 w-auto" />
+        <CardHeader className="space-y-2 pb-6 relative">
+          <div className="flex items-center justify-center mb-2">
+            <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-16 w-auto" />
           </div>
-          <CardTitle className="text-3xl font-bold text-center text-amber-400">
+          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent drop-shadow-sm">
             Ryunix Format
           </CardTitle>
           <CardDescription className="text-base text-center text-slate-400">Login to manage your tournament coins and decks</CardDescription>
@@ -277,12 +277,12 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
 
   return (
     <div className="min-h-screen bg-slate-900">
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
+      <header className="bg-slate-900/90 backdrop-blur-xl border-b border-amber-500/30 shadow-2xl shadow-amber-500/10 sticky top-0 z-50 relative">
         <div className="container mx-auto px-4 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src="/logo.svg" alt="Yu-Gi-Oh!" className="h-10 w-auto" />
+            <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-10 w-auto" />
             <div>
-              <h1 className="text-3xl font-black text-amber-400">Ryunix Format</h1>
+              <h1 className="text-3xl font-black bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent drop-shadow-lg">Ryunix Format</h1>
               <p className="text-sm text-slate-400 font-medium mt-0.5">
                 Welcome back, <span className="text-amber-300 font-bold">{user.username}</span>
               </p>
@@ -296,7 +296,7 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
                 <span className="font-black text-2xl text-amber-400">{user.coin.toLocaleString()}</span>
               </div>
             </div>
-            <Button variant="outline" onClick={onLogout} className="border-slate-600 text-slate-300 hover:bg-red-950 hover:text-red-300 hover:border-red-500">
+            <Button variant="outline" onClick={onLogout} className="border-slate-600 text-slate-300 hover:bg-red-950/50 hover:text-red-300 hover:border-red-500/50 transition-all duration-200 shadow-lg">
               <LogOut className="size-4 mr-2" />
               Logout
             </Button>
