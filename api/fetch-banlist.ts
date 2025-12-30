@@ -3,13 +3,19 @@ import { createClient } from '@supabase/supabase-js';
 import type { BanStatus } from '@/data/banlist';
 
 // Validate environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+// Try both NEXT_PUBLIC and VITE prefixes since user might use either
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase environment variables');
-  console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'set' : 'NOT SET');
-  console.error('SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? 'set' : 'NOT SET');
+if (!supabaseUrl) {
+  console.error('❌ Missing Supabase URL');
+  console.error('Expected: NEXT_PUBLIC_SUPABASE_URL or VITE_SUPABASE_URL');
+}
+
+if (!supabaseKey) {
+  console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY');
+  console.error('This is a REQUIRED environment variable for the API to work');
+  console.error('Get it from: Supabase Dashboard → Settings → API → Service Role Secret Key');
 }
 
 const supabase = createClient(supabaseUrl || '', supabaseKey || '');
