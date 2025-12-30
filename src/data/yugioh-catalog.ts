@@ -567,7 +567,6 @@ export const STAPLE_CARDS: CatalogItem[] = [
   { name: "Dimensional Prison", rating: "B", price: 50, imageUrl: getCardImageUrl(70342110) },
   { name: "Heavy Storm Duster", rating: "B", price: 50, imageUrl: getCardImageUrl(23924608) },
   { name: "Trap Trick", rating: "A", price: 100, imageUrl: getCardImageUrl(90956013) },
-  { name: "Infinite Impermanence", rating: "S", price: 200, imageUrl: getCardImageUrl(10045474) },
   { name: "Evenly Matched", rating: "S", price: 200, imageUrl: getCardImageUrl(15693423) },
   { name: "Shared Ride", rating: "A", price: 100, imageUrl: getCardImageUrl(96363153) },
   { name: "Cycle Reader", rating: "B", price: 50, imageUrl: getCardImageUrl(64379430) },
