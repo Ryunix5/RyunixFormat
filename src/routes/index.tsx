@@ -1356,6 +1356,12 @@ function CollectionTab({ userId }: { userId: string }) {
   // Ref to allow BroadcastChannel callback to reload current archetype
   const handleArchetypeClickRef = useRef<(name: string) => Promise<void>>(async () => {});
 
+  // Get ban status for a card
+  const _banlistVersion = useBanlistVersion();
+  const getBanStatus = useCallback((cardName: string): BanStatus => {
+    return (banlist[cardName]?.banStatus as BanStatus) ?? 'unlimited';
+  }, [_banlistVersion]);
+
   useEffect(() => {
     loadPurchases();
   }, [userId]);
@@ -2013,6 +2019,11 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
       console.error('Failed to reload banlist after change', e);
     }
   }
+
+  // Get ban status for a card
+  const getBanStatus = useCallback((cardName: string): BanStatus => {
+    return (banlist[cardName]?.banStatus as BanStatus) ?? 'unlimited';
+  }, [banlistVersion]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative">
