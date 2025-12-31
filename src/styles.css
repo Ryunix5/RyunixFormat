@@ -134,8 +134,9 @@ code {
 		outline: none;
 	}
 	body {
-		@apply bg-background text-foreground;
+		@apply text-foreground;
 		position: relative;
+		background-color: #0f172a;
 	}
 	body::before {
 		content: '';
@@ -149,7 +150,10 @@ code {
 		background-position: center;
 		background-repeat: no-repeat;
 		opacity: 0.15;
-		pointer-events: none;
-		z-index: 9999;
+		z-index: 0;
+	}
+	#root {
+		position: relative;
+		z-index: 1;
 	}
 }
