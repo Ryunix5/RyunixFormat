@@ -326,7 +326,7 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
 
       <main className="container mx-auto px-4 py-10">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto h-14 bg-slate-800 border border-slate-700 rounded-lg p-1">
+          <TabsList className="grid w-full grid-cols-3 max-w-2xl mx-auto h-14 bg-slate-800 border border-slate-700 rounded-lg p-1">
             <TabsTrigger value="catalog" className="data-[state=active]:bg-amber-500 data-[state=active]:text-slate-900 data-[state=active]:font-bold text-slate-400 rounded-lg">
               <ShoppingBag className="size-5 mr-2" />
               <span className="text-base">Store</span>
@@ -334,7 +334,10 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
             <TabsTrigger value="collection" className="data-[state=active]:bg-amber-500 data-[state=active]:text-slate-900 data-[state=active]:font-bold text-slate-400 rounded-lg">
               <Package className="size-5 mr-2" />
               <span className="text-base">Collection</span>
-              My Collection
+            </TabsTrigger>
+            <TabsTrigger value="banlist" className="data-[state=active]:bg-amber-500 data-[state=active]:text-slate-900 data-[state=active]:font-bold text-slate-400 rounded-lg">
+              <Shield className="size-5 mr-2" />
+              <span className="text-base">Banlist</span>
             </TabsTrigger>
           </TabsList>
 
@@ -344,6 +347,10 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
 
           <TabsContent value="collection" className="mt-6">
             <CollectionTab userId={user.id} />
+          </TabsContent>
+
+          <TabsContent value="banlist" className="mt-6">
+            <UserBanlistTab />
           </TabsContent>
         </Tabs>
       </main>
@@ -4177,6 +4184,152 @@ function StaplesManageTab() {
                 Showing {filteredStaples.length} of {effectiveStaples.length} staples
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// User Banlist Tab - View the official banlist
+function UserBanlistTab() {
+  const [banlist, setBanlist] = useState<Record<string, { status: BanStatus; lastUpdated: Date }>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<BanStatus | "all">("all");
+
+  useEffect(() => {
+    loadBanlist();
+  }, []);
+
+  async function loadBanlist() {
+    try {
+      setIsLoading(true);
+      const orm = new BanlistORM();
+      const data = await orm.getBanlist();
+      setBanlist(data);
+    } catch (err) {
+      console.error("Failed to load banlist", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const bannedCards = Object.entries(banlist).map(([name, data]) => ({
+    name,
+    status: data.status,
+    lastUpdated: data.lastUpdated
+  }));
+
+  const filteredCards = bannedCards.filter(card => {
+    const matchesSearch = card.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterStatus === "all" || card.status === filterStatus;
+    return matchesSearch && matchesFilter;
+  });
+
+  const getStatusColor = (status: BanStatus) => {
+    switch (status) {
+      case "Forbidden": return "bg-red-500/20 text-red-400 border-red-500";
+      case "Limited": return "bg-yellow-500/20 text-yellow-400 border-yellow-500";
+      case "Semi-Limited": return "bg-blue-500/20 text-blue-400 border-blue-500";
+      default: return "bg-slate-500/20 text-slate-400 border-slate-500";
+    }
+  };
+
+  const getStatusCount = (status: BanStatus) => 
+    bannedCards.filter(card => card.status === status).length;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-3 rounded-full bg-amber-500 animate-bounce" />
+          <p className="text-slate-400">Loading banlist...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="border border-slate-700 bg-slate-800">
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent">
+            Official Banlist
+          </CardTitle>
+          <CardDescription className="text-center text-slate-400">
+            View all banned, limited, and semi-limited cards
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-red-950/30 border border-red-500/30 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-red-400">{getStatusCount("Forbidden")}</div>
+              <div className="text-sm text-slate-400">Forbidden</div>
+            </div>
+            <div className="bg-yellow-950/30 border border-yellow-500/30 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-yellow-400">{getStatusCount("Limited")}</div>
+              <div className="text-sm text-slate-400">Limited</div>
+            </div>
+            <div className="bg-blue-950/30 border border-blue-500/30 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-blue-400">{getStatusCount("Semi-Limited")}</div>
+              <div className="text-sm text-slate-400">Semi-Limited</div>
+            </div>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
+              <Input
+                placeholder="Search cards..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-slate-700 border-slate-600 text-slate-100"
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as BanStatus | "all")}>
+              <SelectTrigger className="w-full sm:w-48 bg-slate-700 border-slate-600 text-slate-100">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Forbidden">Forbidden</SelectItem>
+                <SelectItem value="Limited">Limited</SelectItem>
+                <SelectItem value="Semi-Limited">Semi-Limited</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Cards List */}
+          <div className="space-y-2 max-h-[600px] overflow-y-auto">
+            {filteredCards.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                {searchQuery || filterStatus !== "all" ? "No cards match your filters" : "No banned cards yet"}
+              </div>
+            ) : (
+              filteredCards.map(card => (
+                <div
+                  key={card.name}
+                  className="flex items-center gap-4 p-4 bg-slate-700/50 border border-slate-600 rounded-lg hover:border-amber-500/50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-slate-100">{card.name}</div>
+                    <div className="text-xs text-slate-500">
+                      Last updated: {new Date(card.lastUpdated).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <Badge className={`${getStatusColor(card.status)} border px-3 py-1`}>
+                    {card.status}
+                  </Badge>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="text-xs text-slate-500 text-center">
+            Showing {filteredCards.length} of {bannedCards.length} cards
           </div>
         </CardContent>
       </Card>
