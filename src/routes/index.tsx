@@ -4193,7 +4193,7 @@ function StaplesManageTab() {
 
 // User Banlist Tab - View the official banlist
 function UserBanlistTab() {
-  const [banlist, setBanlist] = useState<Record<string, { status: BanStatus; lastUpdated: Date }>>({});
+  const [banlist, setBanlist] = useState<Record<string, BannedCard>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<BanStatus | "all">("all");
@@ -4205,7 +4205,7 @@ function UserBanlistTab() {
   async function loadBanlist() {
     try {
       setIsLoading(true);
-      const orm = new BanlistORM();
+      const orm = BanlistORM.getInstance();
       const data = await orm.getBanlist();
       setBanlist(data);
     } catch (err) {
@@ -4217,7 +4217,7 @@ function UserBanlistTab() {
 
   const bannedCards = Object.entries(banlist).map(([name, data]) => ({
     name,
-    status: data.status,
+    status: data.banStatus,
     lastUpdated: data.lastUpdated
   }));
 
@@ -4229,10 +4229,19 @@ function UserBanlistTab() {
 
   const getStatusColor = (status: BanStatus) => {
     switch (status) {
-      case "Forbidden": return "bg-red-500/20 text-red-400 border-red-500";
-      case "Limited": return "bg-yellow-500/20 text-yellow-400 border-yellow-500";
-      case "Semi-Limited": return "bg-blue-500/20 text-blue-400 border-blue-500";
+      case "forbidden": return "bg-red-500/20 text-red-400 border-red-500";
+      case "limited": return "bg-yellow-500/20 text-yellow-400 border-yellow-500";
+      case "semi-limited": return "bg-blue-500/20 text-blue-400 border-blue-500";
       default: return "bg-slate-500/20 text-slate-400 border-slate-500";
+    }
+  };
+
+  const getStatusLabel = (status: BanStatus) => {
+    switch (status) {
+      case "forbidden": return "Forbidden";
+      case "limited": return "Limited";
+      case "semi-limited": return "Semi-Limited";
+      default: return "Unlimited";
     }
   };
 
@@ -4265,15 +4274,15 @@ function UserBanlistTab() {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-red-950/30 border border-red-500/30 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-red-400">{getStatusCount("Forbidden")}</div>
+              <div className="text-3xl font-bold text-red-400">{getStatusCount("forbidden")}</div>
               <div className="text-sm text-slate-400">Forbidden</div>
             </div>
             <div className="bg-yellow-950/30 border border-yellow-500/30 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-yellow-400">{getStatusCount("Limited")}</div>
+              <div className="text-3xl font-bold text-yellow-400">{getStatusCount("limited")}</div>
               <div className="text-sm text-slate-400">Limited</div>
             </div>
             <div className="bg-blue-950/30 border border-blue-500/30 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-blue-400">{getStatusCount("Semi-Limited")}</div>
+              <div className="text-3xl font-bold text-blue-400">{getStatusCount("semi-limited")}</div>
               <div className="text-sm text-slate-400">Semi-Limited</div>
             </div>
           </div>
@@ -4295,9 +4304,9 @@ function UserBanlistTab() {
               </SelectTrigger>
               <SelectContent className="bg-slate-700 border-slate-600">
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Forbidden">Forbidden</SelectItem>
-                <SelectItem value="Limited">Limited</SelectItem>
-                <SelectItem value="Semi-Limited">Semi-Limited</SelectItem>
+                <SelectItem value="forbidden">Forbidden</SelectItem>
+                <SelectItem value="limited">Limited</SelectItem>
+                <SelectItem value="semi-limited">Semi-Limited</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -4321,7 +4330,7 @@ function UserBanlistTab() {
                     </div>
                   </div>
                   <Badge className={`${getStatusColor(card.status)} border px-3 py-1`}>
-                    {card.status}
+                    {getStatusLabel(card.status)}
                   </Badge>
                 </div>
               ))
