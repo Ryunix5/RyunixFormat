@@ -19,7 +19,7 @@ import { CoinLogORM, type CoinLogModel } from "@/sdk/database/orm/orm_coin_log";
 import { UserORM, type UserModel } from "@/sdk/database/orm/orm_user";
 import { BanlistORM } from "@/sdk/database/orm/orm_banlist";
 import { CardCatalogORM } from "@/sdk/database/orm/orm_cards";
-import type { BanStatus } from "@/data/banlist";
+import type { BanStatus, BannedCard } from "@/data/banlist";
 import { ARCHETYPE_DECKS, STAPLE_CARDS, type CatalogItem, type MetaRating, META_RATING_PRICES } from "@/data/yugioh-catalog";
 import { hashPassword, verifyPassword, createAuthToken, getAuthToken, setAuthToken, clearAuthToken } from "@/lib/auth";
 import { getUserByUsername } from "@/lib/db";
