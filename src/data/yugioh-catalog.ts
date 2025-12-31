@@ -532,7 +532,6 @@ export const STAPLE_CARDS: CatalogItem[] = [
   { name: "Divine Arsenal AA-ZEUS - Sky Thunder", rating: "S", price: 200, imageUrl: getCardImageUrl(90448279) },
   { name: "Borreload Savage Dragon", rating: "S", price: 200, imageUrl: getCardImageUrl(95472621) },
   { name: "Crystal Wing Synchro Dragon", rating: "A", price: 100, imageUrl: getCardImageUrl(50954680) },
-  { name: "Crystron Halqifibrax", rating: "S+", price: 400, imageUrl: getCardImageUrl(50588353) },
   { name: "Abyss Dweller", rating: "S", price: 200, imageUrl: getCardImageUrl(21044178) },
   { name: "Tornado Dragon", rating: "A", price: 100, imageUrl: getCardImageUrl(77457176) },
   { name: "Castel, the Skyblaster Musketeer", rating: "S", price: 200, imageUrl: getCardImageUrl(82633039) },
