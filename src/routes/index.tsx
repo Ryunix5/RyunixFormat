@@ -296,7 +296,7 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
   const [activeTab, setActiveTab] = useState("catalog");
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-transparent">
       <header className="bg-slate-900/90 border-b border-amber-500/30 sticky top-0 z-50 relative">
         <div className="container mx-auto px-4 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
