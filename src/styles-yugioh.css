@@ -1,0 +1,272 @@
+/* YuGiOh Custom Theme - Professional Card Game Design */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  /* YuGiOh Color Palette */
+  --yu-dark: #0a0e27;
+  --yu-darker: #050709;
+  --yu-gold: #d4af37;
+  --yu-purple: #6f42c1;
+  --yu-blue: #1f4788;
+  --yu-accent: #ff6b35;
+  --yu-success: #2ecc71;
+  --yu-danger: #e74c3c;
+  
+  /* Card Status Colors */
+  --forbidden-red: #c92a2a;
+  --limited-orange: #fd7e14;
+  --semi-limited-yellow: #ffd43b;
+}
+
+/* Override global styles with YuGiOh theme */
+body {
+  background: linear-gradient(135deg, var(--yu-dark) 0%, var(--yu-darker) 100%);
+  color: #f0f0f0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+}
+
+/* Custom heading styles */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+h1 {
+  font-size: 3rem;
+  letter-spacing: -0.04em;
+  color: var(--yu-gold);
+  text-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+}
+
+h2 {
+  font-size: 2rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--yu-gold);
+  padding-bottom: 0.5rem;
+}
+
+/* Card design improvements */
+.card-yugioh {
+  background: linear-gradient(135deg, #1a1f2e 0%, #222838 100%);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-yugioh:hover {
+  border-color: rgba(212, 175, 55, 0.6);
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Banlist status badges */
+.badge-forbidden {
+  background: linear-gradient(135deg, #c92a2a 0%, #a61e4d 100%);
+  color: white;
+  font-weight: 700;
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 8px rgba(201, 42, 42, 0.3);
+}
+
+.badge-limited {
+  background: linear-gradient(135deg, #fd7e14 0%, #f76707 100%);
+  color: white;
+  font-weight: 700;
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 8px rgba(253, 126, 20, 0.3);
+}
+
+.badge-semi-limited {
+  background: linear-gradient(135deg, #ffd43b 0%, #f9ca24 100%);
+  color: #1a1a1a;
+  font-weight: 700;
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 8px rgba(255, 212, 59, 0.2);
+}
+
+/* Custom button styles */
+.btn-primary {
+  background: linear-gradient(135deg, var(--yu-purple) 0%, #5a3a8f 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #7d51d9 0%, #6f42c1 100%);
+  box-shadow: 0 6px 20px rgba(111, 66, 193, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, var(--yu-gold) 0%, #c49a1e 100%);
+  color: #1a1f2e;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+}
+
+.btn-accent:hover {
+  background: linear-gradient(135deg, #e8c547 0%, #d4af37 100%);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Header styling */
+.header-yugioh {
+  background: linear-gradient(135deg, var(--yu-blue) 0%, var(--yu-dark) 100%);
+  border-bottom: 3px solid var(--yu-gold);
+  padding: 1.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.header-yugioh::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--yu-gold), transparent);
+  opacity: 0.5;
+}
+
+/* Input styles */
+input[type="text"],
+input[type="search"],
+input[type="number"],
+textarea,
+select {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  color: #f0f0f0;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--yu-gold);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+/* Table styles */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+thead {
+  background: linear-gradient(135deg, rgba(31, 71, 136, 0.3) 0%, rgba(111, 66, 193, 0.2) 100%);
+  border-bottom: 2px solid var(--yu-gold);
+}
+
+thead th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 700;
+  color: var(--yu-gold);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+tbody tr {
+  border-bottom: 1px solid #27272a;
+  transition: all 0.2s;
+}
+
+tbody tr:hover {
+  background: rgba(111, 66, 193, 0.1);
+}
+
+tbody td {
+  padding: 0.875rem 1rem;
+  color: #f0f0f0;
+}
+
+/* Loading animation */
+@keyframes shimmer {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.loading {
+  animation: shimmer 1.5s infinite;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
+/* Remove transitions on animations */
+.animate-spin,
+.animate-bounce,
+.animate-pulse {
+  transition: none !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1f2e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--yu-purple) 0%, var(--yu-gold) 100%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #7d51d9 0%, #e8c547 100%);
+}
