@@ -246,7 +246,7 @@ function LoginPage({ onLogin }: { onLogin: (user: UserModel) => void }) {
           <div className="flex items-center justify-center mb-2">
             <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-16 w-auto" />
           </div>
-          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent drop-shadow-sm">
+          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent">
             Ryunix Format
           </CardTitle>
           <CardDescription className="text-base text-center text-slate-400">Login to manage your tournament coins and decks</CardDescription>
@@ -297,12 +297,12 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
 
   return (
     <div className="min-h-screen bg-slate-900">
-      <header className="bg-slate-900/90 backdrop-blur-xl border-b border-amber-500/30 shadow-2xl shadow-amber-500/10 sticky top-0 z-50 relative">
+      <header className="bg-slate-900/90 border-b border-amber-500/30 sticky top-0 z-50 relative">
         <div className="container mx-auto px-4 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img src="/yugioh-logo.svg" alt="Yu-Gi-Oh!" className="h-10 w-auto" />
             <div>
-              <h1 className="text-3xl font-black bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent drop-shadow-lg">Ryunix Format</h1>
+              <h1 className="text-3xl font-black bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent">Ryunix Format</h1>
               <p className="text-sm text-slate-400 font-medium mt-0.5">
                 Welcome back, <span className="text-amber-300 font-bold">{user.username}</span>
               </p>
@@ -316,7 +316,7 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
                 <span className="font-black text-2xl text-amber-400">{user.coin.toLocaleString()}</span>
               </div>
             </div>
-            <Button variant="outline" onClick={onLogout} className="border-slate-600 text-slate-300 hover:bg-red-950/50 hover:text-red-300 hover:border-red-500/50 transition-all duration-200 shadow-lg">
+            <Button variant="outline" onClick={onLogout} className="border-slate-600 text-slate-300 hover:bg-red-950/50 hover:text-red-300 hover:border-red-500/50 transition-all duration-200">
               <LogOut className="size-4 mr-2" />
               Logout
             </Button>
@@ -2546,7 +2546,7 @@ function DeleteArchetypeTab() {
                 value={selectedArchetype}
                 onChange={(e) => setSelectedArchetype(e.target.value)}
                 disabled={isLoading}
-                className="w-full px-3 py-2 rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-colors"
+                className="w-full px-3 py-2 rounded-md bg-slate-800 border border-slate-700 text-slate-100 focus:border-rose-500 transition-colors"
               >
                 <option value="">-- Choose an archetype --</option>
                 {availableArchetypes.map((arch) => (
@@ -2667,8 +2667,8 @@ function CoinHistoryTab() {
             )}
 
             <div className="flex gap-2">
-              <Input type="text" placeholder="Enter username..." value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="flex-1 transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20 " />
-              <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold transition-colors  hover:shadow-blue-500/40">
+              <Input type="text" placeholder="Enter username..." value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="flex-1 transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-blue-500 " />
+              <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold transition-colors">
                 {isLoading ? "Searching..." : "Search"}
               </Button>
             </div>
@@ -2856,8 +2856,8 @@ function PurchaseLogTab() {
               )}
 
               <div className="flex gap-2">
-                <Input type="text" placeholder="Enter username..." value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="flex-1 transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 " />
-                <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold transition-colors  shadow-purple-500/25 hover:shadow-purple-500/40">
+                <Input type="text" placeholder="Enter username..." value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="flex-1 transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-purple-500 " />
+                <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold transition-colors">
                   {isLoading ? "Searching..." : "Search"}
                 </Button>
               </div>
