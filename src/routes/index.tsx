@@ -327,10 +327,14 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
 
       <main className="container mx-auto px-4 py-10">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3 max-w-2xl mx-auto h-14 bg-slate-800 border border-slate-700 rounded-lg p-1">
+          <TabsList className="grid w-full grid-cols-4 max-w-3xl mx-auto h-14 bg-slate-800 border border-slate-700 rounded-lg p-1">
             <TabsTrigger value="catalog" className="data-[state=active]:bg-amber-500 data-[state=active]:text-slate-900 data-[state=active]:font-bold text-slate-400 rounded-lg">
               <ShoppingBag className="size-5 mr-2" />
               <span className="text-base">Store</span>
+            </TabsTrigger>
+            <TabsTrigger value="gacha" className="data-[state=active]:bg-amber-500 data-[state=active]:text-slate-900 data-[state=active]:font-bold text-slate-400 rounded-lg">
+              <Star className="size-5 mr-2" />
+              <span className="text-base">Gacha</span>
             </TabsTrigger>
             <TabsTrigger value="collection" className="data-[state=active]:bg-amber-500 data-[state=active]:text-slate-900 data-[state=active]:font-bold text-slate-400 rounded-lg">
               <Package className="size-5 mr-2" />
@@ -344,6 +348,10 @@ function PlayerDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; on
 
           <TabsContent value="catalog" className="mt-6">
             <CatalogTab user={user} onUserUpdate={onUserUpdate} />
+          </TabsContent>
+
+          <TabsContent value="gacha" className="mt-6">
+            <GachaTab user={user} onUserUpdate={onUserUpdate} />
           </TabsContent>
 
           <TabsContent value="collection" className="mt-6">
@@ -4482,6 +4490,331 @@ function StaplesManageTab() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// Gacha Tab - Random card pulls
+type GachaRarity = 'Common' | 'Rare' | 'Super Rare' | 'Ultra Rare';
+
+interface GachaBanner {
+  id: string;
+  name: string;
+  description: string;
+  singleCost: number;
+  multiCost: number;
+  imageUrl?: string;
+}
+
+interface GachaResult {
+  card: ArchetypeCard;
+  rarity: GachaRarity;
+  isNew: boolean;
+}
+
+function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (userId: string) => void }) {
+  const [pulling, setPulling] = useState(false);
+  const [results, setResults] = useState<GachaResult[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [error, setError] = useState("");
+
+  const banners: GachaBanner[] = [
+    {
+      id: 'standard',
+      name: 'Standard Banner',
+      description: 'Pull random cards from all available archetypes',
+      singleCost: 50,
+      multiCost: 450,
+    },
+    {
+      id: 'premium',
+      name: 'Premium Banner',
+      description: 'Higher chance for rare cards',
+      singleCost: 100,
+      multiCost: 900,
+    },
+  ];
+
+  async function performPull(banner: GachaBanner, count: number) {
+    if (pulling) return;
+    
+    const cost = count === 1 ? banner.singleCost : banner.multiCost;
+    
+    if (user.coin < cost) {
+      setError("Insufficient coins!");
+      return;
+    }
+
+    setPulling(true);
+    setError("");
+    setResults([]);
+
+    try {
+      // Get user's existing collection to check for new cards
+      const purchaseORM = PurchaseORM.getInstance();
+      const purchases = await purchaseORM.getPurchaseByUserId(user.id);
+      const ownedCardIds = new Set<number>();
+
+      // Fetch all owned cards
+      for (const purchase of purchases) {
+        try {
+          const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(purchase.item_name)}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data) {
+              data.data.forEach((card: ArchetypeCard) => ownedCardIds.add(card.id));
+            }
+          }
+        } catch (err) {
+          // Ignore errors for individual purchases
+        }
+      }
+
+      // Fetch random cards from all archetypes
+      const allArchetypes = ARCHETYPE_DECKS.map(d => d.name);
+      const pulledCards: GachaResult[] = [];
+
+      for (let i = 0; i < count; i++) {
+        // Pick random archetype
+        const randomArchetype = allArchetypes[Math.floor(Math.random() * allArchetypes.length)];
+        
+        try {
+          const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(randomArchetype)}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data && data.data.length > 0) {
+              // Pick random card from archetype
+              const randomCard = data.data[Math.floor(Math.random() * data.data.length)];
+              
+              // Determine rarity based on banner type and RNG
+              let rarity: GachaRarity;
+              const rarityRoll = Math.random();
+              
+              if (banner.id === 'premium') {
+                // Premium has better rates
+                if (rarityRoll < 0.05) rarity = 'Ultra Rare';
+                else if (rarityRoll < 0.20) rarity = 'Super Rare';
+                else if (rarityRoll < 0.50) rarity = 'Rare';
+                else rarity = 'Common';
+              } else {
+                // Standard rates
+                if (rarityRoll < 0.02) rarity = 'Ultra Rare';
+                else if (rarityRoll < 0.10) rarity = 'Super Rare';
+                else if (rarityRoll < 0.30) rarity = 'Rare';
+                else rarity = 'Common';
+              }
+
+              pulledCards.push({
+                card: randomCard,
+                rarity,
+                isNew: !ownedCardIds.has(randomCard.id),
+              });
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to fetch cards for ${randomArchetype}`, err);
+        }
+      }
+
+      if (pulledCards.length === 0) {
+        setError("Failed to pull cards. Please try again.");
+        return;
+      }
+
+      // Deduct coins
+      const userORM = UserORM.getInstance();
+      const updatedUser = { ...user, coin: user.coin - cost };
+      await userORM.setUserById(user.id, updatedUser);
+
+      // Log the gacha pull
+      const coinLogORM = CoinLogORM.getInstance();
+      await coinLogORM.insertCoinLog([
+        {
+          user_id: user.id,
+          amount: -cost,
+          reason: `Gacha pull: ${banner.name} x${count}`,
+          created_at: String(Math.floor(Date.now() / 1000)),
+        } as unknown as CoinLogModel,
+      ]);
+
+      // Add cards to collection
+      const cardCatalogORM = CardCatalogORM.getInstance();
+      const cardsToAdd = pulledCards.map(result => ({
+        name: result.card.name,
+        data: result.card,
+        archetypes: [`GACHA:${banner.name}`, `USER:${user.id}`],
+      }));
+      await cardCatalogORM.bulkUpsert(cardsToAdd);
+
+      setResults(pulledCards);
+      setShowResults(true);
+      onUserUpdate(user.id);
+    } catch (err) {
+      console.error("Gacha pull failed:", err);
+      setError("Pull failed. Please try again.");
+    } finally {
+      setPulling(false);
+    }
+  }
+
+  const getRarityColor = (rarity: GachaRarity) => {
+    switch (rarity) {
+      case 'Ultra Rare': return 'from-purple-500 to-pink-500';
+      case 'Super Rare': return 'from-yellow-500 to-orange-500';
+      case 'Rare': return 'from-blue-500 to-cyan-500';
+      default: return 'from-slate-500 to-slate-600';
+    }
+  };
+
+  const getRarityBorder = (rarity: GachaRarity) => {
+    switch (rarity) {
+      case 'Ultra Rare': return 'border-purple-500';
+      case 'Super Rare': return 'border-yellow-500';
+      case 'Rare': return 'border-blue-500';
+      default: return 'border-slate-600';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center space-y-2">
+        <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+          Gacha System
+        </h2>
+        <p className="text-slate-400">Pull random cards and expand your collection!</p>
+      </div>
+
+      {error && (
+        <Alert className="bg-red-950/30 border-red-500/50">
+          <AlertDescription className="text-red-400">{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Banners */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {banners.map(banner => (
+          <Card key={banner.id} className="border-2 border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold text-amber-400">{banner.name}</CardTitle>
+              <CardDescription className="text-slate-300">{banner.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                  <span className="text-slate-300">Single Pull</span>
+                  <div className="flex items-center gap-2">
+                    <Coins className="size-4 text-amber-400" />
+                    <span className="font-bold text-amber-300">{banner.singleCost}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                  <span className="text-slate-300">10x Pull</span>
+                  <div className="flex items-center gap-2">
+                    <Coins className="size-4 text-amber-400" />
+                    <span className="font-bold text-amber-300">{banner.multiCost}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => performPull(banner, 1)}
+                  disabled={pulling || user.coin < banner.singleCost}
+                  className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-bold"
+                >
+                  {pulling ? "Pulling..." : "Pull x1"}
+                </Button>
+                <Button
+                  onClick={() => performPull(banner, 10)}
+                  disabled={pulling || user.coin < banner.multiCost}
+                  className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold"
+                >
+                  {pulling ? "Pulling..." : "Pull x10"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Rates Info */}
+      <Card className="border border-slate-700 bg-slate-800">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold text-amber-400">Drop Rates</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h4 className="font-semibold text-slate-300 mb-2">Standard Banner</h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-purple-400">Ultra Rare:</span><span className="text-slate-400">2%</span></div>
+                <div className="flex justify-between"><span className="text-yellow-400">Super Rare:</span><span className="text-slate-400">8%</span></div>
+                <div className="flex justify-between"><span className="text-blue-400">Rare:</span><span className="text-slate-400">20%</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Common:</span><span className="text-slate-400">70%</span></div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-300 mb-2">Premium Banner</h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-purple-400">Ultra Rare:</span><span className="text-slate-400">5%</span></div>
+                <div className="flex justify-between"><span className="text-yellow-400">Super Rare:</span><span className="text-slate-400">15%</span></div>
+                <div className="flex justify-between"><span className="text-blue-400">Rare:</span><span className="text-slate-400">30%</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Common:</span><span className="text-slate-400">50%</span></div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results Dialog */}
+      <Dialog open={showResults} onOpenChange={setShowResults}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
+              Gacha Results
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              You pulled {results.length} card{results.length > 1 ? 's' : ''}!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh] pr-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {results.map((result, index) => (
+                <div
+                  key={index}
+                  className={`relative flex flex-col p-3 rounded-lg border-2 ${getRarityBorder(result.rarity)} bg-gradient-to-br ${getRarityColor(result.rarity)} bg-opacity-10`}
+                >
+                  {result.isNew && (
+                    <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 z-10">
+                      NEW!
+                    </Badge>
+                  )}
+                  {result.card.card_images && result.card.card_images[0] && (
+                    <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
+                      <img 
+                        src={result.card.card_images[0].image_url_small || result.card.card_images[0].image_url} 
+                        alt={result.card.name} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                  )}
+                  <div className="text-xs font-semibold text-slate-100 truncate text-center" title={result.card.name}>
+                    {result.card.name}
+                  </div>
+                  <div className={`text-xs font-bold text-center mt-1 bg-gradient-to-r ${getRarityColor(result.rarity)} bg-clip-text text-transparent`}>
+                    {result.rarity}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowResults(false)} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold">
+              Awesome!
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
