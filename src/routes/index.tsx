@@ -1491,7 +1491,7 @@ type CardSortOption = "name-asc" | "name-desc" | "atk-asc" | "atk-desc" | "def-a
 function CollectionTab({ userId }: { userId: string }) {
   const [purchases, setPurchases] = useState<PurchaseModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeView, setActiveView] = useState<"history" | "allCards">("history");
+  const [activeView, setActiveView] = useState<"history" | "allCards">("allCards");
   const [selectedArchetype, setSelectedArchetype] = useState<string | null>(null);
   const [archetypeCards, setArchetypeCards] = useState<ArchetypeCard[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
