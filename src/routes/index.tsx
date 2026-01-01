@@ -4970,7 +4970,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                       {/* Booster pack template overlay - on top of artwork */}
                       <div className="absolute inset-0 z-[2]">
                         <img 
-                          src="/booster-template.png"
+                          src="/Booster Pack.png"
                           alt="Booster Pack Template"
                           className="w-full h-full object-cover"
                         />
