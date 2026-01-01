@@ -2297,7 +2297,7 @@ function GrantCoinsTab() {
       let users: UserModel[];
       if (grantToAll) {
         // Get all users
-        users = await userORM.getAllUsers();
+        users = await userORM.getAllUser();
         if (users.length === 0) {
           setError("No users found in the database!");
           return;
