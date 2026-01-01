@@ -4693,6 +4693,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           description: 'Pull random cards from all available archetypes',
           singleCost: 4,
           multiCost: 90,
+          imageUrl: '/common.png',
           packType: 'standard',
         },
         {
@@ -4701,6 +4702,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           description: 'Higher chance for rare cards',
           singleCost: 5,
           multiCost: 115,
+          imageUrl: '/premium.png',
           packType: 'premium',
         },
       ]);
@@ -4892,7 +4894,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           <AlertDescription className="text-amber-400">No gacha packs available. Contact admin.</AlertDescription>
         </Alert>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory">
           {banners.map(banner => {
             const isPremium = banner.packType === 'premium';
             const cardBorderColor = isPremium ? 'border-red-500/70' : 'border-gray-500/70';
@@ -4905,7 +4907,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
             const packLabelColor = isPremium ? 'text-red-400' : 'text-gray-400';
             
             return (
-              <Card key={banner.id} className={`border-2 ${cardBorderColor} bg-gradient-to-br ${cardGradient} overflow-hidden shadow-xl ${glowColor}`}>
+              <Card key={banner.id} className={`min-w-[400px] max-w-[400px] flex-shrink-0 snap-center border-2 ${cardBorderColor} bg-gradient-to-br ${cardGradient} overflow-hidden shadow-xl ${glowColor}`}>
                 <CardHeader>
                   {/* Pack Image Display */}
                   {banner.imageUrl && (
