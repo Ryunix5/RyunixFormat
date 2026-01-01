@@ -4971,9 +4971,9 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                           </div>
                         )
                       ) : (
-                        /* Custom packs: show artwork with template overlay */
-                        <>
-                          {/* Custom artwork - same dimensions as template */}
+                        /* Custom packs: show artwork with template overlay, clip overflow */
+                        <div className="absolute inset-0 overflow-hidden">
+                          {/* Custom artwork - full size */}
                           {banner.imageUrl && (
                             <div className="absolute inset-0 p-4 flex items-center justify-center z-[1]">
                               <img 
@@ -4984,7 +4984,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                             </div>
                           )}
                           
-                          {/* Booster pack template overlay - scaled to fit and centered */}
+                          {/* Booster pack template overlay */}
                           <div className="absolute inset-0 p-4 flex items-center justify-center z-[2]">
                             <img 
                               src="/Booster Pack.png"
@@ -4992,7 +4992,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                               className="max-w-full max-h-full object-contain"
                             />
                           </div>
-                        </>
+                        </div>
                       )}
                       
                       {/* Pack type badge - above everything */}
