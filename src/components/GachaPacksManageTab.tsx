@@ -29,6 +29,8 @@ export function GachaPacksManageTab() {
   const [formImageUrl, setFormImageUrl] = useState("");
   const [formCardsArchetypes, setFormCardsArchetypes] = useState<string>("");
   const [artworkOffsetY, setArtworkOffsetY] = useState(0);
+  const [artworkOffsetX, setArtworkOffsetX] = useState(0);
+  const [artworkZoom, setArtworkZoom] = useState(1);
 
   useEffect(() => {
     loadPacks();
@@ -58,6 +60,8 @@ export function GachaPacksManageTab() {
     setFormImageUrl("");
     setFormCardsArchetypes("");
     setArtworkOffsetY(0);
+    setArtworkOffsetX(0);
+    setArtworkZoom(1);
     setEditingPack(null);
   }
 
@@ -364,9 +368,9 @@ export function GachaPacksManageTab() {
                   {/* Center glow */}
                   <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${formPackType === 'premium' ? 'bg-red-600' : 'bg-gray-500'} rounded-full opacity-50 blur-2xl z-0`} />
                   
-                  {/* Artwork with offset */}
-                  <div className="absolute inset-0 px-16 flex items-center justify-center z-[1]" style={{ paddingTop: `${80 + artworkOffsetY}px`, paddingBottom: `${80 - artworkOffsetY}px` }}>
-                    <img src={formImageUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
+                  {/* Artwork with offset and zoom */}
+                  <div className="absolute inset-0 px-16 flex items-center justify-center z-[1]" style={{ paddingTop: `${80 + artworkOffsetY}px`, paddingBottom: `${80 - artworkOffsetY}px`, paddingLeft: `${64 + artworkOffsetX}px`, paddingRight: `${64 - artworkOffsetX}px` }}>
+                    <img src={formImageUrl} alt="Preview" className="object-contain" style={{ maxWidth: '500px', maxHeight: '100%', transform: `scale(${artworkZoom})` }} />
                   </div>
                   
                   {/* Template overlay */}
@@ -380,28 +384,80 @@ export function GachaPacksManageTab() {
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Adjust Artwork Position (Vertical)</Label>
-                  <div className="flex items-center gap-4">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setArtworkOffsetY(Math.max(-40, artworkOffsetY - 5))}
-                      className="border-slate-700 text-slate-300"
-                    >
-                      Move Up
-                    </Button>
-                    <span className="text-slate-400 text-sm flex-1 text-center">Offset: {artworkOffsetY}px</span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setArtworkOffsetY(Math.min(40, artworkOffsetY + 5))}
-                      className="border-slate-700 text-slate-300"
-                    >
-                      Move Down
-                    </Button>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Vertical Position</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setArtworkOffsetY(Math.max(-40, artworkOffsetY - 5))}
+                        className="border-slate-700 text-slate-300"
+                      >
+                        Up
+                      </Button>
+                      <span className="text-slate-400 text-sm flex-1 text-center">{artworkOffsetY}px</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setArtworkOffsetY(Math.min(40, artworkOffsetY + 5))}
+                        className="border-slate-700 text-slate-300"
+                      >
+                        Down
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Horizontal Position</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setArtworkOffsetX(Math.max(-40, artworkOffsetX - 5))}
+                        className="border-slate-700 text-slate-300"
+                      >
+                        Left
+                      </Button>
+                      <span className="text-slate-400 text-sm flex-1 text-center">{artworkOffsetX}px</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setArtworkOffsetX(Math.min(40, artworkOffsetX + 5))}
+                        className="border-slate-700 text-slate-300"
+                      >
+                        Right
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Zoom</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setArtworkZoom(Math.max(0.5, artworkZoom - 0.1))}
+                        className="border-slate-700 text-slate-300"
+                      >
+                        Zoom Out
+                      </Button>
+                      <span className="text-slate-400 text-sm flex-1 text-center">{(artworkZoom * 100).toFixed(0)}%</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setArtworkZoom(Math.min(2, artworkZoom + 0.1))}
+                        className="border-slate-700 text-slate-300"
+                      >
+                        Zoom In
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
