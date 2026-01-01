@@ -4894,35 +4894,49 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {banners.map(banner => {
-            const centerColor = banner.packType === 'premium' ? 'bg-red-600' : 'bg-gray-600';
+            const isPremium = banner.packType === 'premium';
+            const cardBorderColor = isPremium ? 'border-red-500/70' : 'border-gray-500/70';
+            const cardGradient = isPremium 
+              ? 'from-red-950/50 via-slate-900 to-red-950/50' 
+              : 'from-gray-800/50 via-slate-900 to-gray-800/50';
+            const centerColor = isPremium ? 'bg-red-600' : 'bg-gray-500';
+            const glowColor = isPremium ? 'shadow-red-500/20' : 'shadow-gray-500/20';
+            const packLabel = isPremium ? 'PREMIUM PACK' : 'STANDARD PACK';
+            const packLabelColor = isPremium ? 'text-red-400' : 'text-gray-400';
+            
             return (
-              <Card key={banner.id} className="border-2 border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
+              <Card key={banner.id} className={`border-2 ${cardBorderColor} bg-gradient-to-br ${cardGradient} overflow-hidden shadow-xl ${glowColor}`}>
                 <CardHeader>
                   {/* Pack Image Display */}
                   {banner.imageUrl && (
                     <div className="mb-4 relative">
-                      <div className="relative w-full h-64 bg-slate-900 rounded-lg overflow-hidden border-2 border-slate-700">
+                      <div className={`relative w-full h-64 bg-slate-900 rounded-lg overflow-hidden border-4 ${cardBorderColor}`}>
                         {/* Background pattern */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
+                        <div className={`absolute inset-0 bg-gradient-to-br ${cardGradient}`} />
                         
                         {/* Konami logo at top */}
-                        <div className="absolute top-2 left-2 bg-red-700 px-3 py-1 rounded text-white font-bold text-sm">
+                        <div className="absolute top-2 left-2 bg-red-700 px-3 py-1 rounded text-white font-bold text-sm z-10">
                           KONAMI
                         </div>
                         
-                        {/* Center color indicator */}
-                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 ${centerColor} rounded-full opacity-40 blur-xl`} />
+                        {/* Pack type badge */}
+                        <div className={`absolute top-2 right-2 ${isPremium ? 'bg-red-600' : 'bg-gray-600'} px-3 py-1 rounded text-white font-bold text-xs z-10`}>
+                          {packLabel}
+                        </div>
+                        
+                        {/* Center color indicator - larger and more prominent */}
+                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${centerColor} rounded-full opacity-50 blur-2xl`} />
                         
                         {/* Pack image */}
                         <img 
                           src={banner.imageUrl} 
                           alt={banner.name}
-                          className="absolute inset-0 w-full h-full object-contain p-4"
+                          className="absolute inset-0 w-full h-full object-contain p-4 z-10"
                         />
                         
                         {/* Yu-Gi-Oh! TCG logo at bottom */}
-                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center">
-                          <div className="text-red-600 font-black text-xs tracking-wider drop-shadow-lg">
+                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center z-10">
+                          <div className="text-red-600 font-black text-xs tracking-wider drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">
                             Yu-Gi-Oh! TRADING CARD GAME
                           </div>
                         </div>
@@ -4930,7 +4944,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                     </div>
                   )}
                   
-                  <CardTitle className="text-2xl font-bold text-amber-400">{banner.name}</CardTitle>
+                  <CardTitle className={`text-2xl font-bold ${isPremium ? 'text-red-400' : 'text-gray-300'}`}>{banner.name}</CardTitle>
                   <CardDescription className="text-slate-300">{banner.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
