@@ -4708,7 +4708,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
       // Add cards to collection as purchase records (so they show up in Collection tab)
       const purchaseRecords = pulledCards.map(result => ({
         user_id: user.id,
-        item_name: result.archetype || result.card.archetype || 'Unknown',
+        item_name: result.archetype || 'Unknown',
         item_type: PurchaseItemType.Gacha,
         bought_at: String(Math.floor(Date.now() / 1000)),
       } as unknown as PurchaseModel));
