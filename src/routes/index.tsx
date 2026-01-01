@@ -1780,6 +1780,24 @@ function CollectionTab({ userId }: { userId: string }) {
         } catch (err) {
           console.error(`Failed to fetch staple card ${purchase.item_name}:`, err);
         }
+      } else if (purchase.item_type === PurchaseItemType.Gacha) {
+        // Gacha purchases are individual cards by exact name
+        try {
+          const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(purchase.item_name)}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data) {
+              const cardsWithSource = data.data.map((card: ArchetypeCard) => ({
+                ...card,
+                sourceArchetype: "Gacha",
+                purchaseDate: Number(purchase.bought_at),
+              }));
+              allCards.push(...cardsWithSource);
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to fetch gacha card ${purchase.item_name}:`, err);
+        }
       } else {
         // Unknown item - try archetype first, then name
         try {
@@ -4705,28 +4723,19 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
         } as unknown as CoinLogModel,
       ]);
 
-      // Add cards to collection as purchase records (so they show up in Collection tab)
-      const purchaseRecords = pulledCards.map(result => ({
-        user_id: user.id,
-        item_name: result.archetype || 'Unknown',
-        item_type: PurchaseItemType.Gacha,
-        bought_at: String(Math.floor(Date.now() / 1000)),
-      } as unknown as PurchaseModel));
-      
-      // Insert unique archetype purchases (avoid duplicates)
-      const uniqueArchetypes = new Set(purchaseRecords.map(p => p.item_name));
-      const uniquePurchases = Array.from(uniqueArchetypes).map(archetype => ({
-        user_id: user.id,
-        item_name: archetype,
-        item_type: PurchaseItemType.Gacha,
-        bought_at: String(Math.floor(Date.now() / 1000)),
-      } as unknown as PurchaseModel));
-      
-      // Only add archetypes user doesn't already own
-      for (const purchase of uniquePurchases) {
-        const existing = await purchaseORM.getPurchaseByItemNameUserId(purchase.item_name, user.id);
+      // Add individual cards to collection as purchase records (not whole archetypes!)
+      // Each pulled card gets its own purchase record with the card name
+      for (const result of pulledCards) {
+        const cardName = result.card.name;
+        // Check if user already owns this specific card
+        const existing = await purchaseORM.getPurchaseByItemNameUserId(cardName, user.id);
         if (existing.length === 0) {
-          await purchaseORM.insertPurchase([purchase]);
+          await purchaseORM.insertPurchase([{
+            user_id: user.id,
+            item_name: cardName,
+            item_type: PurchaseItemType.Gacha,
+            bought_at: String(Math.floor(Date.now() / 1000)),
+          } as unknown as PurchaseModel]);
         }
       }
 
