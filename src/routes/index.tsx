@@ -4697,16 +4697,21 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
       
       if (packs && packs.length > 0) {
         // Add custom packs after defaults
-        const customBanners: GachaBanner[] = packs.map(pack => ({
-          id: pack.id,
-          name: pack.name,
-          description: pack.description,
-          singleCost: pack.single_cost,
-          multiCost: pack.multi_cost,
-          imageUrl: pack.image_url,
-          packType: pack.pack_type,
-          cardsArchetypes: pack.cards_archetypes || [],
-        }));
+        console.log('Loaded packs from database:', packs);
+        const customBanners: GachaBanner[] = packs.map(pack => {
+          console.log(`Pack "${pack.name}" has cards_archetypes:`, pack.cards_archetypes);
+          return {
+            id: pack.id,
+            name: pack.name,
+            description: pack.description,
+            singleCost: pack.single_cost,
+            multiCost: pack.multi_cost,
+            imageUrl: pack.image_url,
+            packType: pack.pack_type,
+            cardsArchetypes: pack.cards_archetypes || [],
+          };
+        });
+        console.log('Custom banners created:', customBanners);
         setBanners([...defaultBanners, ...customBanners]);
       } else {
         // Only defaults
@@ -4723,6 +4728,8 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
 
   async function performPull(banner: GachaBanner, count: number) {
     if (pulling) return;
+    
+    console.log('performPull called with banner:', banner);
     
     const cost = count === 9 ? banner.singleCost : banner.multiCost;
     
