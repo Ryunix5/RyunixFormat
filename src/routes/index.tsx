@@ -4956,20 +4956,24 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                       {/* Center color indicator - behind everything */}
                       <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${centerColor} rounded-full opacity-50 blur-2xl z-0`} />
                       
-                      {/* Custom artwork - resized to fit in center area */}
+                      {/* Custom artwork - resized to match template dimensions, behind template */}
                       {banner.imageUrl && (
-                        <div className="absolute inset-0 flex items-center justify-center p-8 z-[1]">
+                        <div className="absolute inset-0 z-[1]">
                           <img 
                             src={banner.imageUrl} 
                             alt={banner.name}
-                            className="max-w-full max-h-full object-contain"
+                            className="w-full h-full object-cover"
                           />
                         </div>
                       )}
                       
-                      {/* Konami logo at top - above everything */}
-                      <div className="absolute top-2 left-2 bg-red-700 px-3 py-1 rounded text-white font-bold text-sm z-20">
-                        KONAMI
+                      {/* Booster pack template overlay - on top of artwork */}
+                      <div className="absolute inset-0 z-[2]">
+                        <img 
+                          src="/booster-template.png"
+                          alt="Booster Pack Template"
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                       
                       {/* Pack type badge - above everything */}
