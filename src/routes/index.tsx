@@ -1297,7 +1297,25 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                 {selectedBundle.cards.map((card) => (
                   <div 
                     key={card.id} 
-                    className="flex flex-col p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors"
+                    className="flex flex-col p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+                    onClick={() => {
+                      // Convert BundleCard to ArchetypeCard format
+                      const archetypeCard: ArchetypeCard = {
+                        id: card.id,
+                        name: card.name,
+                        type: card.type,
+                        desc: card.desc,
+                        race: card.type.split(' ')[0] || 'Unknown',
+                        card_images: card.imageUrl ? [{ 
+                          id: card.id, 
+                          image_url: card.imageUrl,
+                          image_url_small: card.imageUrl,
+                          image_url_cropped: card.imageUrl
+                        }] : []
+                      };
+                      setSelectedCard(archetypeCard);
+                    }}
+                    title="Click to view card details"
                   >
                     {card.imageUrl && (
                       <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
