@@ -1782,7 +1782,7 @@ function CollectionTab({ userId }: { userId: string }) {
         } catch (err) {
           console.error(`Failed to fetch staple card ${purchase.item_name}:`, err);
         }
-      } else if (purchase.item_type === PurchaseItemType.Gacha || purchase.item_type === 4) {
+      } else if (purchase.item_type === PurchaseItemType.Gacha || (purchase.item_type as any) === 4) {
         // Gacha purchases are individual cards by exact name
         try {
           const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(purchase.item_name)}`);
