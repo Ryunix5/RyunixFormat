@@ -1486,7 +1486,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
 
 type AllCardsViewMode = "grid" | "list";
 type CardTypeFilter = "all" | "monster" | "spell" | "trap";
-type CardSortOption = "name-asc" | "name-desc" | "atk-asc" | "atk-desc" | "def-asc" | "def-desc" | "level-asc" | "level-desc" | "type";
+type CardSortOption = "name-asc" | "name-desc" | "atk-asc" | "atk-desc" | "def-asc" | "def-desc" | "level-asc" | "level-desc" | "type" | "newest" | "oldest";
 
 function CollectionTab({ userId }: { userId: string }) {
   const [purchases, setPurchases] = useState<PurchaseModel[]>([]);
@@ -1710,9 +1710,10 @@ function CollectionTab({ userId }: { userId: string }) {
     }
   }, [activeView, purchases]);
 
-  // Extended type to track source archetype
+  // Extended type to track source archetype and purchase date
   interface OwnedCard extends ArchetypeCard {
     sourceArchetype?: string;
+    purchaseDate?: number;
   }
 
   async function loadAllOwnedCards() {
@@ -1739,6 +1740,7 @@ function CollectionTab({ userId }: { userId: string }) {
               const cardsWithSource = data.data.map((card: ArchetypeCard) => ({
                 ...card,
                 sourceArchetype: purchase.item_name,
+                purchaseDate: Number(purchase.bought_at),
               }));
               allCards.push(...cardsWithSource);
             }
@@ -1751,6 +1753,7 @@ function CollectionTab({ userId }: { userId: string }) {
                 const cardsWithSource = nameData.data.slice(0, 30).map((card: ArchetypeCard) => ({
                   ...card,
                   sourceArchetype: purchase.item_name,
+                  purchaseDate: Number(purchase.bought_at),
                 }));
                 allCards.push(...cardsWithSource);
               }
@@ -1769,6 +1772,7 @@ function CollectionTab({ userId }: { userId: string }) {
               const cardsWithSource = data.data.map((card: ArchetypeCard) => ({
                 ...card,
                 sourceArchetype: "Staples",
+                purchaseDate: Number(purchase.bought_at),
               }));
               allCards.push(...cardsWithSource);
             }
@@ -1786,6 +1790,7 @@ function CollectionTab({ userId }: { userId: string }) {
               const cardsWithSource = data.data.map((card: ArchetypeCard) => ({
                 ...card,
                 sourceArchetype: purchase.item_name,
+                purchaseDate: Number(purchase.bought_at),
               }));
               allCards.push(...cardsWithSource);
             }
@@ -1973,6 +1978,10 @@ function CollectionTab({ userId }: { userId: string }) {
           return (b.level ?? -1) - (a.level ?? -1);
         case "type":
           return a.type.localeCompare(b.type);
+        case "newest":
+          return ((b as OwnedCard).purchaseDate ?? 0) - ((a as OwnedCard).purchaseDate ?? 0);
+        case "oldest":
+          return ((a as OwnedCard).purchaseDate ?? 0) - ((b as OwnedCard).purchaseDate ?? 0);
         default:
           return 0;
       }
@@ -2208,6 +2217,8 @@ function CollectionTab({ userId }: { userId: string }) {
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
+                    <SelectItem value="newest" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Newest First</SelectItem>
+                    <SelectItem value="oldest" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Oldest First</SelectItem>
                     <SelectItem value="name-asc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Name (A-Z)</SelectItem>
                     <SelectItem value="name-desc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Name (Z-A)</SelectItem>
                     <SelectItem value="atk-desc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">ATK (High-Low)</SelectItem>
@@ -4556,6 +4567,7 @@ interface GachaResult {
   card: ArchetypeCard;
   rarity: GachaRarity;
   isNew: boolean;
+  archetype?: string; // Track which archetype the card came from
 }
 
 function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (userId: string) => void }) {
@@ -4565,6 +4577,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
   const [error, setError] = useState("");
   const [animatingCards, setAnimatingCards] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
+  const [selectedGachaCard, setSelectedGachaCard] = useState<{card: ArchetypeCard; rarity: GachaRarity; archetype?: string} | null>(null);
 
   const banners: GachaBanner[] = [
     {
@@ -4656,6 +4669,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                 card: randomCard,
                 rarity,
                 isNew: !ownedCardIds.has(randomCard.id),
+                archetype: randomArchetype,
               });
             }
           }
@@ -4846,13 +4860,15 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                 return (
                   <div
                     key={index}
+                    onClick={() => isRevealed && setSelectedGachaCard({card: result.card, rarity: result.rarity, archetype: result.archetype})}
                     className={`relative flex flex-col p-3 rounded-lg border-2 ${getRarityBorder(result.rarity)} bg-gradient-to-br ${getRarityColor(result.rarity)} bg-opacity-10 transition-all duration-300 ${
-                      isRevealed ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
+                      isRevealed ? 'opacity-100 scale-100 cursor-pointer hover:scale-105' : 'opacity-0 scale-50'
                     }`}
                     style={{
                       transformOrigin: 'center',
                       animation: isRevealed ? 'cardFlip 0.5s ease-out' : 'none',
                     }}
+                    title={isRevealed ? "Click to view details" : ""}
                   >
                     {result.isNew && isRevealed && (
                       <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 z-10 animate-bounce">
@@ -4903,6 +4919,89 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           }
         }
       `}</style>
+
+      {/* Gacha Card Details Dialog */}
+      <Dialog open={selectedGachaCard !== null} onOpenChange={(open) => { if (!open) setSelectedGachaCard(null); }}>
+        <DialogContent className="max-w-2xl bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-amber-400">{selectedGachaCard?.card.name}</DialogTitle>
+            <DialogDescription className="flex items-center gap-2">
+              <span className={`font-bold bg-gradient-to-r ${selectedGachaCard ? getRarityColor(selectedGachaCard.rarity) : ''} bg-clip-text text-transparent`}>
+                {selectedGachaCard?.rarity}
+              </span>
+              {selectedGachaCard?.archetype && (
+                <>
+                  <span className="text-slate-600">•</span>
+                  <span className="text-slate-400">Archetype: {selectedGachaCard.archetype}</span>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedGachaCard && (
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <div className="shrink-0">
+                  <img 
+                    src={selectedGachaCard.card.card_images[0]?.image_url_small || selectedGachaCard.card.card_images[0]?.image_url} 
+                    alt={selectedGachaCard.card.name}
+                    className="w-48 h-auto rounded-lg border border-slate-600"
+                  />
+                </div>
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <p className="text-sm text-slate-400">Type</p>
+                    <p className="text-slate-100 font-semibold">{selectedGachaCard.card.type}</p>
+                  </div>
+                  {selectedGachaCard.card.race && (
+                    <div>
+                      <p className="text-sm text-slate-400">Race/Type</p>
+                      <p className="text-slate-100 font-semibold">{selectedGachaCard.card.race}</p>
+                    </div>
+                  )}
+                  {selectedGachaCard.card.attribute && (
+                    <div>
+                      <p className="text-sm text-slate-400">Attribute</p>
+                      <p className="text-slate-100 font-semibold">{selectedGachaCard.card.attribute}</p>
+                    </div>
+                  )}
+                  {selectedGachaCard.card.level !== undefined && (
+                    <div>
+                      <p className="text-sm text-slate-400">Level/Rank</p>
+                      <p className="text-slate-100 font-semibold">{selectedGachaCard.card.level}</p>
+                    </div>
+                  )}
+                  {selectedGachaCard.card.atk !== undefined && (
+                    <div className="flex gap-4">
+                      <div>
+                        <p className="text-sm text-slate-400">ATK</p>
+                        <p className="text-slate-100 font-semibold">{selectedGachaCard.card.atk}</p>
+                      </div>
+                      {selectedGachaCard.card.def !== undefined && (
+                        <div>
+                          <p className="text-sm text-slate-400">DEF</p>
+                          <p className="text-slate-100 font-semibold">{selectedGachaCard.card.def}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-slate-400">Pull Rarity</p>
+                    <p className={`font-bold bg-gradient-to-r ${getRarityColor(selectedGachaCard.rarity)} bg-clip-text text-transparent`}>
+                      {selectedGachaCard.rarity}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400 mb-2">Description</p>
+                <p className="text-slate-200 leading-relaxed bg-slate-800 p-3 rounded-lg border border-slate-700">
+                  {selectedGachaCard.card.desc}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
