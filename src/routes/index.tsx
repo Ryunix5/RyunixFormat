@@ -21,6 +21,7 @@ import { BanlistORM } from "@/sdk/database/orm/orm_banlist";
 import { CardCatalogORM } from "@/sdk/database/orm/orm_cards";
 import type { BanStatus, BannedCard } from "@/data/banlist";
 import { ARCHETYPE_DECKS, STAPLE_CARDS, type CatalogItem, type MetaRating, META_RATING_PRICES } from "@/data/yugioh-catalog";
+import { CARD_BUNDLES, type CardBundle } from "@/data/card-bundles";
 import { hashPassword, verifyPassword, createAuthToken, getAuthToken, setAuthToken, clearAuthToken } from "@/lib/auth";
 import { getUserByUsername } from "@/lib/db";
 import { initializeAdminUser } from "@/lib/init-admin";
@@ -378,17 +379,18 @@ const archetypeImageCache: Record<string, string> = {};
 const archetypeImageFailCache: Record<string, boolean> = {};
 
 function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (userId: string) => void }) {
-  const [category, setCategory] = useState<"decks" | "staples">("decks");
+  const [category, setCategory] = useState<"decks" | "staples" | "bundles">("decks");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRating, setFilterRating] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"name" | "price-asc" | "price-desc" | "rating">("name");
   const [viewMode, setViewMode] = useState<"list" | "compact" | "grid">("grid");
-  const [confirmPurchase, setConfirmPurchase] = useState<CatalogItem | null>(null);
+  const [confirmPurchase, setConfirmPurchase] = useState<CatalogItem | CardBundle | null>(null);
   const [selectedCard, setSelectedCard] = useState<ArchetypeCard | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [selectedArchetype, setSelectedArchetype] = useState<string | null>(null);
+  const [selectedBundle, setSelectedBundle] = useState<CardBundle | null>(null);
   const [archetypeCards, setArchetypeCards] = useState<ArchetypeCard[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
   const [cardError, setCardError] = useState("");
@@ -447,25 +449,35 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
   };
 
   // Use effective staples list (includes admin additions/removals)
-  const rawItems = category === "decks" ? ARCHETYPE_DECKS : getEffectiveStaples();
+  const rawItems = category === "decks" ? ARCHETYPE_DECKS : category === "staples" ? getEffectiveStaples() : CARD_BUNDLES;
   
   // Filter out removed archetypes (marked as is_removed in card modifications)
   const items = useMemo(() => {
+    if (category === "bundles") return rawItems; // Bundles don't have modifications
     return rawItems.filter(item => {
       const mod = cardModifications[item.name];
       return !mod || !mod.is_removed;
     });
-  }, [rawItems, cardModifications]);
+  }, [rawItems, cardModifications, category]);
   
   // Memoize filtered items for performance
   const filteredItems = useMemo(() => {
-    const filtered = items.filter((item) => {
-      const displayName = cardModifications[item.name]?.displayName ?? item.name;
-      const matchesSearch = item.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                            displayName.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-      const currentRating = cardModifications[item.name]?.rating ?? item.rating;
-      const matchesRating = filterRating === "all" || currentRating === filterRating;
-      return matchesSearch && matchesRating;
+    const filtered = items.filter((item: any) => {
+      if (category === "bundles") {
+        // Bundle filtering
+        const matchesSearch = item.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                              item.type.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+        const matchesRating = filterRating === "all" || item.rating === filterRating;
+        return matchesSearch && matchesRating;
+      } else {
+        // Deck/Staple filtering
+        const displayName = cardModifications[item.name]?.displayName ?? item.name;
+        const matchesSearch = item.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                              displayName.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+        const currentRating = cardModifications[item.name]?.rating ?? item.rating;
+        const matchesRating = filterRating === "all" || currentRating === filterRating;
+        return matchesSearch && matchesRating;
+      }
     });
 
     // Apply sorting
@@ -853,6 +865,9 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
           </Button>
           <Button variant={category === "staples" ? "default" : "outline"} onClick={() => setCategory("staples")} className={category === "staples" ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400"}>
             Staple Cards ({getEffectiveStaples().length})
+          </Button>
+          <Button variant={category === "bundles" ? "default" : "outline"} onClick={() => setCategory("bundles")} className={category === "bundles" ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400"}>
+            Bundles ({CARD_BUNDLES.length})
           </Button>
         </div>
         <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
