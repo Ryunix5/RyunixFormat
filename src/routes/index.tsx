@@ -4672,21 +4672,25 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
       const gachaPackORM = GachaPackORM.getInstance();
       const packs = await gachaPackORM.getActivePacks();
       
-      const loadedBanners: GachaBanner[] = packs.map(pack => ({
-        id: pack.id,
-        name: pack.name,
-        description: pack.description,
-        singleCost: pack.single_cost,
-        multiCost: pack.multi_cost,
-        imageUrl: pack.image_url,
-        packType: pack.pack_type,
-      }));
-
-      setBanners(loadedBanners);
+      if (packs && packs.length > 0) {
+        const loadedBanners: GachaBanner[] = packs.map(pack => ({
+          id: pack.id,
+          name: pack.name,
+          description: pack.description,
+          singleCost: pack.single_cost,
+          multiCost: pack.multi_cost,
+          imageUrl: pack.image_url,
+          packType: pack.pack_type,
+        }));
+        setBanners(loadedBanners);
+      } else {
+        // No packs in database, use defaults
+        throw new Error('No packs available');
+      }
     } catch (err) {
       console.error('Failed to load gacha packs:', err);
       // Fallback to default packs
-      setBanners([
+      const defaultBanners: GachaBanner[] = [
         {
           id: 'standard',
           name: 'Standard Pack',
@@ -4705,7 +4709,9 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           imageUrl: '/premium.png',
           packType: 'premium',
         },
-      ]);
+      ];
+      console.log('Using default packs:', defaultBanners);
+      setBanners(defaultBanners);
     } finally {
       setLoading(false);
     }
