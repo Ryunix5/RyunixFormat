@@ -361,30 +361,35 @@ export function GachaPacksManageTab() {
             {formImageUrl && (
               <div className="p-4 bg-slate-800 rounded-lg border border-slate-700 space-y-4">
                 <p className="text-sm text-slate-400 mb-2">Pack Preview with Template:</p>
-                <div className="relative w-full h-64 bg-slate-900 rounded overflow-hidden">
-                  {/* Background gradient */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${formPackType === 'premium' ? 'from-red-950/50 via-slate-900 to-red-950/50' : 'from-gray-800/50 via-slate-900 to-gray-800/50'}`} />
-                  
-                  {/* Center glow */}
-                  <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${formPackType === 'premium' ? 'bg-red-600' : 'bg-gray-500'} rounded-full opacity-50 blur-2xl z-0`} />
-                  
-                  {/* Artwork container - HARD CLIPPED to 500px width */}
-                  <div className="absolute inset-0 flex items-center justify-center z-[1]">
-                    <div className="relative overflow-hidden" style={{ width: '500px', height: '840px' }}>
-                      <div className="absolute inset-0 flex items-center justify-center" style={{ transform: `translate(${artworkOffsetX}px, ${artworkOffsetY}px) scale(${artworkZoom})` }}>
+                <div className="flex justify-center">
+                  <div className="relative bg-slate-900 rounded overflow-hidden" style={{ width: '250px', height: '350px' }}>
+                    {/* Background gradient */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${formPackType === 'premium' ? 'from-red-950/50 via-slate-900 to-red-950/50' : 'from-gray-800/50 via-slate-900 to-gray-800/50'}`} />
+                    
+                    {/* Center glow */}
+                    <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 ${formPackType === 'premium' ? 'bg-red-600' : 'bg-gray-500'} rounded-full opacity-50 blur-2xl z-0`} />
+                    
+                    {/* Artwork with transforms */}
+                    <div className="absolute inset-0 flex items-center justify-center z-[1]">
+                      <div 
+                        className="absolute inset-0 flex items-center justify-center"
+                        style={{ 
+                          transform: `translate(${artworkOffsetX}px, ${artworkOffsetY}px) scale(${artworkZoom})`
+                        }}
+                      >
                         <img src={formImageUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Template overlay */}
-                  <div className="absolute inset-0 p-2 flex items-center justify-center z-[2]">
-                    <img src="/Booster Pack.png" alt="Template" className="max-w-full max-h-full object-contain" />
-                  </div>
-                  
-                  {/* Pack type badge */}
-                  <div className={`absolute top-2 right-2 ${formPackType === 'premium' ? 'bg-red-600' : 'bg-gray-600'} px-3 py-1 rounded text-white font-bold text-xs z-20`}>
-                    {formPackType === 'premium' ? 'PREMIUM PACK' : 'STANDARD PACK'}
+                    
+                    {/* Template overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center z-[2]">
+                      <img src="/Booster Pack.png" alt="Template" className="w-full h-full object-cover" />
+                    </div>
+                    
+                    {/* Pack type badge */}
+                    <div className={`absolute top-2 right-2 ${formPackType === 'premium' ? 'bg-red-600' : 'bg-gray-600'} px-2 py-1 rounded text-white font-bold text-[10px] z-20`}>
+                      {formPackType === 'premium' ? 'PREMIUM' : 'STANDARD'}
+                    </div>
                   </div>
                 </div>
                 
