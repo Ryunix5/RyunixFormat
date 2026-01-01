@@ -4943,49 +4943,61 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
             const centerColor = isPremium ? 'bg-red-600' : 'bg-gray-500';
             const glowColor = isPremium ? 'shadow-red-500/20' : 'shadow-gray-500/20';
             const packLabel = isPremium ? 'PREMIUM PACK' : 'STANDARD PACK';
-            const packLabelColor = isPremium ? 'text-red-400' : 'text-gray-400';
+            
+            // Determine which template to use
+            const templateImage = isPremium ? '/premium.png' : '/common.png';
+            const hasCustomArt = banner.imageUrl && banner.imageUrl !== templateImage;
             
             return (
               <Card key={banner.id} className={`min-w-[400px] max-w-[400px] flex-shrink-0 snap-center border-2 ${cardBorderColor} bg-gradient-to-br ${cardGradient} overflow-hidden shadow-xl ${glowColor}`}>
                 <CardHeader>
                   {/* Pack Image Display */}
-                  {banner.imageUrl && (
-                    <div className="mb-4 relative">
-                      <div className={`relative w-full h-64 bg-slate-900 rounded-lg overflow-hidden border-4 ${cardBorderColor}`}>
-                        {/* Background pattern */}
-                        <div className={`absolute inset-0 bg-gradient-to-br ${cardGradient}`} />
-                        
-                        {/* Center color indicator - behind the image */}
-                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${centerColor} rounded-full opacity-50 blur-2xl z-0`} />
-                        
-                        {/* Pack image - contained within border with padding */}
-                        <div className="absolute inset-0 p-2 flex items-center justify-center z-[1]">
+                  <div className="mb-4 relative">
+                    <div className={`relative w-full h-64 bg-slate-900 rounded-lg overflow-hidden border-4 ${cardBorderColor}`}>
+                      {/* Background pattern */}
+                      <div className={`absolute inset-0 bg-gradient-to-br ${cardGradient}`} />
+                      
+                      {/* Center color indicator - behind everything */}
+                      <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${centerColor} rounded-full opacity-50 blur-2xl z-0`} />
+                      
+                      {/* Custom artwork (if provided) - behind the pack template */}
+                      {hasCustomArt && (
+                        <div className="absolute inset-0 flex items-center justify-center z-[1]">
                           <img 
                             src={banner.imageUrl} 
-                            alt={banner.name}
-                            className="max-w-full max-h-full object-contain"
+                            alt={`${banner.name} artwork`}
+                            className="w-full h-full object-cover"
                           />
                         </div>
-                        
-                        {/* Konami logo at top - above image */}
-                        <div className="absolute top-2 left-2 bg-red-700 px-3 py-1 rounded text-white font-bold text-sm z-20">
-                          KONAMI
-                        </div>
-                        
-                        {/* Pack type badge - above image */}
-                        <div className={`absolute top-2 right-2 ${isPremium ? 'bg-red-600' : 'bg-gray-600'} px-3 py-1 rounded text-white font-bold text-xs z-20`}>
-                          {packLabel}
-                        </div>
-                        
-                        {/* Yu-Gi-Oh! TCG logo at bottom - above image */}
-                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center z-20">
-                          <div className="text-red-600 font-black text-xs tracking-wider drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">
-                            Yu-Gi-Oh! TRADING CARD GAME
-                          </div>
+                      )}
+                      
+                      {/* Pack template overlay - on top of custom art */}
+                      <div className="absolute inset-0 flex items-center justify-center z-[2]">
+                        <img 
+                          src={templateImage} 
+                          alt={banner.name}
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      </div>
+                      
+                      {/* Konami logo at top - above everything */}
+                      <div className="absolute top-2 left-2 bg-red-700 px-3 py-1 rounded text-white font-bold text-sm z-20">
+                        KONAMI
+                      </div>
+                      
+                      {/* Pack type badge - above everything */}
+                      <div className={`absolute top-2 right-2 ${isPremium ? 'bg-red-600' : 'bg-gray-600'} px-3 py-1 rounded text-white font-bold text-xs z-20`}>
+                        {packLabel}
+                      </div>
+                      
+                      {/* Yu-Gi-Oh! TCG logo at bottom - above everything */}
+                      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center z-20">
+                        <div className="text-red-600 font-black text-xs tracking-wider drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">
+                          Yu-Gi-Oh! TRADING CARD GAME
                         </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                   
                   <CardTitle className={`text-2xl font-bold ${isPremium ? 'text-red-400' : 'text-gray-300'}`}>{banner.name}</CardTitle>
                   <CardDescription className="text-slate-300">{banner.description}</CardDescription>
