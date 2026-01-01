@@ -4752,18 +4752,16 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
 
       // Add individual cards to collection as purchase records (not whole archetypes!)
       // Each pulled card gets its own purchase record with the card name
+      const purchaseORM = PurchaseORM.getInstance();
       for (const result of pulledCards) {
         const cardName = result.card.name;
-        // Check if user already owns this specific card
-        const existing = await purchaseORM.getPurchaseByItemNameUserId(cardName, user.id);
-        if (existing.length === 0) {
-          await purchaseORM.insertPurchase([{
-            user_id: user.id,
-            item_name: cardName,
-            item_type: PurchaseItemType.Gacha,
-            bought_at: String(Math.floor(Date.now() / 1000)),
-          } as unknown as PurchaseModel]);
-        }
+        // Always add gacha cards, even duplicates (you can pull same card multiple times)
+        await purchaseORM.insertPurchase([{
+          user_id: user.id,
+          item_name: cardName,
+          item_type: PurchaseItemType.Gacha,
+          bought_at: String(Math.floor(Date.now() / 1000)),
+        } as unknown as PurchaseModel]);
       }
 
       setResults(pulledCards);
