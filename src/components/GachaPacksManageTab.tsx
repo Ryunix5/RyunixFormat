@@ -28,6 +28,7 @@ export function GachaPacksManageTab() {
   const [formMultiCost, setFormMultiCost] = useState("90");
   const [formImageUrl, setFormImageUrl] = useState("");
   const [formCardsArchetypes, setFormCardsArchetypes] = useState<string>("");
+  const [artworkOffsetY, setArtworkOffsetY] = useState(0);
 
   useEffect(() => {
     loadPacks();
@@ -56,6 +57,7 @@ export function GachaPacksManageTab() {
     setFormMultiCost("90");
     setFormImageUrl("");
     setFormCardsArchetypes("");
+    setArtworkOffsetY(0);
     setEditingPack(null);
   }
 
@@ -353,10 +355,54 @@ export function GachaPacksManageTab() {
             </div>
 
             {formImageUrl && (
-              <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
-                <p className="text-sm text-slate-400 mb-2">Image Preview:</p>
-                <div className="relative w-full h-48 bg-slate-900 rounded overflow-hidden">
-                  <img src={formImageUrl} alt="Preview" className="w-full h-full object-contain" />
+              <div className="p-4 bg-slate-800 rounded-lg border border-slate-700 space-y-4">
+                <p className="text-sm text-slate-400 mb-2">Pack Preview with Template:</p>
+                <div className="relative w-full h-64 bg-slate-900 rounded overflow-hidden">
+                  {/* Background gradient */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${formPackType === 'premium' ? 'from-red-950/50 via-slate-900 to-red-950/50' : 'from-gray-800/50 via-slate-900 to-gray-800/50'}`} />
+                  
+                  {/* Center glow */}
+                  <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${formPackType === 'premium' ? 'bg-red-600' : 'bg-gray-500'} rounded-full opacity-50 blur-2xl z-0`} />
+                  
+                  {/* Artwork with offset */}
+                  <div className="absolute inset-0 px-16 flex items-center justify-center z-[1]" style={{ paddingTop: `${80 + artworkOffsetY}px`, paddingBottom: `${80 - artworkOffsetY}px` }}>
+                    <img src={formImageUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
+                  </div>
+                  
+                  {/* Template overlay */}
+                  <div className="absolute inset-0 p-2 flex items-center justify-center z-[2]">
+                    <img src="/Booster Pack.png" alt="Template" className="max-w-full max-h-full object-contain" />
+                  </div>
+                  
+                  {/* Pack type badge */}
+                  <div className={`absolute top-2 right-2 ${formPackType === 'premium' ? 'bg-red-600' : 'bg-gray-600'} px-3 py-1 rounded text-white font-bold text-xs z-20`}>
+                    {formPackType === 'premium' ? 'PREMIUM PACK' : 'STANDARD PACK'}
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Adjust Artwork Position (Vertical)</Label>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setArtworkOffsetY(Math.max(-40, artworkOffsetY - 5))}
+                      className="border-slate-700 text-slate-300"
+                    >
+                      Move Up
+                    </Button>
+                    <span className="text-slate-400 text-sm flex-1 text-center">Offset: {artworkOffsetY}px</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setArtworkOffsetY(Math.min(40, artworkOffsetY + 5))}
+                      className="border-slate-700 text-slate-300"
+                    >
+                      Move Down
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
