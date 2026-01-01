@@ -4563,21 +4563,23 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
   const [results, setResults] = useState<GachaResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState("");
+  const [animatingCards, setAnimatingCards] = useState(false);
+  const [revealedCount, setRevealedCount] = useState(0);
 
   const banners: GachaBanner[] = [
     {
       id: 'standard',
-      name: 'Standard Banner',
+      name: 'Standard Pack',
       description: 'Pull random cards from all available archetypes',
-      singleCost: 50,
-      multiCost: 450,
+      singleCost: 4,
+      multiCost: 90, // 24 packs, slight discount
     },
     {
       id: 'premium',
-      name: 'Premium Banner',
+      name: 'Premium Pack',
       description: 'Higher chance for rare cards',
-      singleCost: 100,
-      multiCost: 900,
+      singleCost: 5,
+      multiCost: 115, // 24 packs, slight discount
     },
   ];
 
@@ -4694,6 +4696,20 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
 
       setResults(pulledCards);
       setShowResults(true);
+      setAnimatingCards(true);
+      setRevealedCount(0);
+      
+      // Animate card reveals
+      pulledCards.forEach((_, index) => {
+        setTimeout(() => {
+          setRevealedCount(index + 1);
+        }, index * 150); // 150ms delay between each card
+      });
+      
+      setTimeout(() => {
+        setAnimatingCards(false);
+      }, pulledCards.length * 150 + 500);
+      
       onUserUpdate(user.id);
     } catch (err) {
       console.error("Gacha pull failed:", err);
@@ -4747,14 +4763,14 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
-                  <span className="text-slate-300">Single Pull</span>
+                  <span className="text-slate-300">Single Pack</span>
                   <div className="flex items-center gap-2">
                     <Coins className="size-4 text-amber-400" />
                     <span className="font-bold text-amber-300">{banner.singleCost}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
-                  <span className="text-slate-300">10x Pull</span>
+                  <span className="text-slate-300">Booster Box (24 Packs)</span>
                   <div className="flex items-center gap-2">
                     <Coins className="size-4 text-amber-400" />
                     <span className="font-bold text-amber-300">{banner.multiCost}</span>
@@ -4768,14 +4784,14 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                   disabled={pulling || user.coin < banner.singleCost}
                   className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-bold"
                 >
-                  {pulling ? "Pulling..." : "Pull x1"}
+                  {pulling ? "Opening..." : "Open Pack"}
                 </Button>
                 <Button
-                  onClick={() => performPull(banner, 10)}
+                  onClick={() => performPull(banner, 24)}
                   disabled={pulling || user.coin < banner.multiCost}
                   className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold"
                 >
-                  {pulling ? "Pulling..." : "Pull x10"}
+                  {pulling ? "Opening..." : "Open Box (24)"}
                 </Button>
               </div>
             </CardContent>
@@ -4791,7 +4807,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h4 className="font-semibold text-slate-300 mb-2">Standard Banner</h4>
+              <h4 className="font-semibold text-slate-300 mb-2">Standard Pack</h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between"><span className="text-purple-400">Ultra Rare:</span><span className="text-slate-400">2%</span></div>
                 <div className="flex justify-between"><span className="text-yellow-400">Super Rare:</span><span className="text-slate-400">8%</span></div>
@@ -4800,7 +4816,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
               </div>
             </div>
             <div>
-              <h4 className="font-semibold text-slate-300 mb-2">Premium Banner</h4>
+              <h4 className="font-semibold text-slate-300 mb-2">Premium Pack</h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between"><span className="text-purple-400">Ultra Rare:</span><span className="text-slate-400">5%</span></div>
                 <div className="flex justify-between"><span className="text-yellow-400">Super Rare:</span><span className="text-slate-400">15%</span></div>
@@ -4817,7 +4833,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden bg-slate-900 border-slate-700">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
-              Gacha Results
+              Pack Opening Results
             </DialogTitle>
             <DialogDescription className="text-slate-400">
               You pulled {results.length} card{results.length > 1 ? 's' : ''}!
@@ -4825,33 +4841,42 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           </DialogHeader>
           <div className="overflow-y-auto max-h-[60vh] pr-2">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {results.map((result, index) => (
-                <div
-                  key={index}
-                  className={`relative flex flex-col p-3 rounded-lg border-2 ${getRarityBorder(result.rarity)} bg-gradient-to-br ${getRarityColor(result.rarity)} bg-opacity-10`}
-                >
-                  {result.isNew && (
-                    <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 z-10">
-                      NEW!
-                    </Badge>
-                  )}
-                  {result.card.card_images && result.card.card_images[0] && (
-                    <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
-                      <img 
-                        src={result.card.card_images[0].image_url_small || result.card.card_images[0].image_url} 
-                        alt={result.card.name} 
-                        className="w-full h-full object-cover" 
-                      />
+              {results.map((result, index) => {
+                const isRevealed = index < revealedCount;
+                return (
+                  <div
+                    key={index}
+                    className={`relative flex flex-col p-3 rounded-lg border-2 ${getRarityBorder(result.rarity)} bg-gradient-to-br ${getRarityColor(result.rarity)} bg-opacity-10 transition-all duration-300 ${
+                      isRevealed ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
+                    }`}
+                    style={{
+                      transformOrigin: 'center',
+                      animation: isRevealed ? 'cardFlip 0.5s ease-out' : 'none',
+                    }}
+                  >
+                    {result.isNew && isRevealed && (
+                      <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 z-10 animate-bounce">
+                        NEW!
+                      </Badge>
+                    )}
+                    {result.card.card_images && result.card.card_images[0] && (
+                      <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
+                        <img 
+                          src={result.card.card_images[0].image_url_small || result.card.card_images[0].image_url} 
+                          alt={result.card.name} 
+                          className="w-full h-full object-cover" 
+                        />
+                      </div>
+                    )}
+                    <div className="text-xs font-semibold text-slate-100 truncate text-center" title={result.card.name}>
+                      {result.card.name}
                     </div>
-                  )}
-                  <div className="text-xs font-semibold text-slate-100 truncate text-center" title={result.card.name}>
-                    {result.card.name}
+                    <div className={`text-xs font-bold text-center mt-1 bg-gradient-to-r ${getRarityColor(result.rarity)} bg-clip-text text-transparent`}>
+                      {result.rarity}
+                    </div>
                   </div>
-                  <div className={`text-xs font-bold text-center mt-1 bg-gradient-to-r ${getRarityColor(result.rarity)} bg-clip-text text-transparent`}>
-                    {result.rarity}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
           <DialogFooter>
@@ -4861,6 +4886,23 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <style>{`
+        @keyframes cardFlip {
+          0% {
+            transform: perspective(1000px) rotateY(90deg);
+            opacity: 0;
+          }
+          50% {
+            transform: perspective(1000px) rotateY(0deg);
+            opacity: 1;
+          }
+          100% {
+            transform: perspective(1000px) rotateY(0deg);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }
