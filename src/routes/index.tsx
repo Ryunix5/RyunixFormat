@@ -1817,7 +1817,7 @@ function CollectionTab({ userId }: { userId: string }) {
   // Export collection as EdoPro banlist format
   async function exportCollectionAsBanlist() {
     if (allOwnedCards.length === 0) {
-      alert("No cards in your collection to export");
+      alert("No cards in your collection to export. Please load your cards first by clicking 'All My Cards'.");
       return;
     }
 
@@ -1828,7 +1828,9 @@ function CollectionTab({ userId }: { userId: string }) {
       
       // All cards in collection are unlimited (3 copies allowed)
       for (const card of allOwnedCards) {
-        content += `${card.id} 3 --${card.name}\n`;
+        if (card.id) {
+          content += `${card.id} 3 --${card.name}\n`;
+        }
       }
 
       const blob = new Blob([content], { type: 'text/plain' });
@@ -1840,9 +1842,11 @@ function CollectionTab({ userId }: { userId: string }) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
+      alert(`Successfully exported ${allOwnedCards.length} cards to banlist file!`);
     } catch (err) {
       console.error("Export failed", err);
-      alert("Failed to export collection. Please try again.");
+      alert(`Failed to export collection: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }
 
