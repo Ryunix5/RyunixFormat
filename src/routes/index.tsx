@@ -4944,10 +4944,6 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
             const glowColor = isPremium ? 'shadow-red-500/20' : 'shadow-gray-500/20';
             const packLabel = isPremium ? 'PREMIUM PACK' : 'STANDARD PACK';
             
-            // Determine which template to use
-            const templateImage = isPremium ? '/premium.png' : '/common.png';
-            const hasCustomArt = banner.imageUrl && banner.imageUrl !== templateImage;
-            
             return (
               <Card key={banner.id} className={`min-w-[400px] max-w-[400px] flex-shrink-0 snap-center border-2 ${cardBorderColor} bg-gradient-to-br ${cardGradient} overflow-hidden shadow-xl ${glowColor}`}>
                 <CardHeader>
@@ -4960,25 +4956,16 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                       {/* Center color indicator - behind everything */}
                       <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${centerColor} rounded-full opacity-50 blur-2xl z-0`} />
                       
-                      {/* Custom artwork (if provided) - behind the pack template */}
-                      {hasCustomArt && (
-                        <div className="absolute inset-0 flex items-center justify-center z-[1]">
+                      {/* Custom artwork - resized to fit in center area */}
+                      {banner.imageUrl && (
+                        <div className="absolute inset-0 flex items-center justify-center p-8 z-[1]">
                           <img 
                             src={banner.imageUrl} 
-                            alt={`${banner.name} artwork`}
-                            className="w-full h-full object-cover"
+                            alt={banner.name}
+                            className="max-w-full max-h-full object-contain"
                           />
                         </div>
                       )}
-                      
-                      {/* Pack template overlay - on top of custom art */}
-                      <div className="absolute inset-0 flex items-center justify-center z-[2]">
-                        <img 
-                          src={templateImage} 
-                          alt={banner.name}
-                          className="max-w-full max-h-full object-contain"
-                        />
-                      </div>
                       
                       {/* Konami logo at top - above everything */}
                       <div className="absolute top-2 left-2 bg-red-700 px-3 py-1 rounded text-white font-bold text-sm z-20">
