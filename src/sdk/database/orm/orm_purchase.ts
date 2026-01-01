@@ -24,6 +24,7 @@ export enum PurchaseItemType {
   Deck = 1,
   Staple = 2,
   Bundle = 3,
+  Gacha = 4,
 }
 
 

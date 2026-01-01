@@ -3190,6 +3190,8 @@ function PurchaseLogTab() {
     if (typeof itemType === 'string') return itemType;
     if (itemType === PurchaseItemType.Deck || itemType === 1) return "Deck";
     if (itemType === PurchaseItemType.Staple || itemType === 2) return "Staple";
+    if (itemType === PurchaseItemType.Bundle || itemType === 3) return "Bundle";
+    if (itemType === PurchaseItemType.Gacha || itemType === 4) return "Gacha";
     return "Unknown";
   }
 
@@ -4703,14 +4705,30 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
         } as unknown as CoinLogModel,
       ]);
 
-      // Add cards to collection
-      const cardCatalogORM = CardCatalogORM.getInstance();
-      const cardsToAdd = pulledCards.map(result => ({
-        name: result.card.name,
-        data: result.card,
-        archetypes: [`GACHA:${banner.name}`, `USER:${user.id}`],
-      }));
-      await cardCatalogORM.bulkUpsert(cardsToAdd);
+      // Add cards to collection as purchase records (so they show up in Collection tab)
+      const purchaseRecords = pulledCards.map(result => ({
+        user_id: user.id,
+        item_name: result.archetype || result.card.archetype || 'Unknown',
+        item_type: PurchaseItemType.Gacha,
+        bought_at: String(Math.floor(Date.now() / 1000)),
+      } as unknown as PurchaseModel));
+      
+      // Insert unique archetype purchases (avoid duplicates)
+      const uniqueArchetypes = new Set(purchaseRecords.map(p => p.item_name));
+      const uniquePurchases = Array.from(uniqueArchetypes).map(archetype => ({
+        user_id: user.id,
+        item_name: archetype,
+        item_type: PurchaseItemType.Gacha,
+        bought_at: String(Math.floor(Date.now() / 1000)),
+      } as unknown as PurchaseModel));
+      
+      // Only add archetypes user doesn't already own
+      for (const purchase of uniquePurchases) {
+        const existing = await purchaseORM.getPurchaseByItemNameUserId(purchase.item_name, user.id);
+        if (existing.length === 0) {
+          await purchaseORM.insertPurchase([purchase]);
+        }
+      }
 
       setResults(pulledCards);
       setShowResults(true);
