@@ -1803,7 +1803,7 @@ function CollectionTab({ userId }: { userId: string }) {
           console.error(`Failed to fetch gacha card ${purchase.item_name}:`, err);
         }
       } else {
-        // Unknown item - try archetype first, then name
+        // Unknown item - try archetype first, then card name (for gacha cards)
         try {
           const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(purchase.item_name)}`);
           if (response.ok) {
@@ -1815,6 +1815,20 @@ function CollectionTab({ userId }: { userId: string }) {
                 purchaseDate: Number(purchase.bought_at),
               }));
               allCards.push(...cardsWithSource);
+            }
+          } else {
+            // Archetype failed - try fetching as individual card name (gacha cards)
+            const nameResponse = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(purchase.item_name)}`);
+            if (nameResponse.ok) {
+              const nameData = await nameResponse.json();
+              if (nameData.data) {
+                const cardsWithSource = nameData.data.map((card: ArchetypeCard) => ({
+                  ...card,
+                  sourceArchetype: "Gacha",
+                  purchaseDate: Number(purchase.bought_at),
+                }));
+                allCards.push(...cardsWithSource);
+              }
             }
           }
         } catch (err) {
