@@ -4944,6 +4944,9 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
             const glowColor = isPremium ? 'shadow-red-500/20' : 'shadow-gray-500/20';
             const packLabel = isPremium ? 'PREMIUM PACK' : 'STANDARD PACK';
             
+            // Check if this is a default pack or custom pack
+            const isDefaultPack = banner.id === 'standard' || banner.id === 'premium';
+            
             return (
               <Card key={banner.id} className={`min-w-[400px] max-w-[400px] flex-shrink-0 snap-center border-2 ${cardBorderColor} bg-gradient-to-br ${cardGradient} overflow-hidden shadow-xl ${glowColor}`}>
                 <CardHeader>
@@ -4956,25 +4959,41 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                       {/* Center color indicator - behind everything */}
                       <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${centerColor} rounded-full opacity-50 blur-2xl z-0`} />
                       
-                      {/* Custom artwork - resized to match template dimensions, behind template */}
-                      {banner.imageUrl && (
-                        <div className="absolute inset-0 z-[1]">
-                          <img 
-                            src={banner.imageUrl} 
-                            alt={banner.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
+                      {isDefaultPack ? (
+                        /* Default packs: just show their image */
+                        banner.imageUrl && (
+                          <div className="absolute inset-0 p-2 flex items-center justify-center z-[1]">
+                            <img 
+                              src={banner.imageUrl} 
+                              alt={banner.name}
+                              className="max-w-full max-h-full object-contain"
+                            />
+                          </div>
+                        )
+                      ) : (
+                        /* Custom packs: show artwork with template overlay */
+                        <>
+                          {/* Custom artwork - resized to match template dimensions, behind template */}
+                          {banner.imageUrl && (
+                            <div className="absolute inset-0 z-[1]">
+                              <img 
+                                src={banner.imageUrl} 
+                                alt={banner.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Booster pack template overlay - scaled to fit and centered */}
+                          <div className="absolute inset-0 p-4 flex items-center justify-center z-[2]">
+                            <img 
+                              src="/Booster Pack.png"
+                              alt="Booster Pack Template"
+                              className="max-w-full max-h-full object-contain"
+                            />
+                          </div>
+                        </>
                       )}
-                      
-                      {/* Booster pack template overlay - on top of artwork */}
-                      <div className="absolute inset-0 z-[2]">
-                        <img 
-                          src="/Booster Pack.png"
-                          alt="Booster Pack Template"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
                       
                       {/* Pack type badge - above everything */}
                       <div className={`absolute top-2 right-2 ${isPremium ? 'bg-red-600' : 'bg-gray-600'} px-3 py-1 rounded text-white font-bold text-xs z-20`}>
