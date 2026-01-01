@@ -4973,13 +4973,13 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                       ) : (
                         /* Custom packs: show artwork with template overlay */
                         <>
-                          {/* Custom artwork - resized to match template dimensions, behind template */}
+                          {/* Custom artwork - scaled to fit inside template */}
                           {banner.imageUrl && (
-                            <div className="absolute inset-0 z-[1]">
+                            <div className="absolute inset-0 p-8 flex items-center justify-center z-[1]">
                               <img 
                                 src={banner.imageUrl} 
                                 alt={banner.name}
-                                className="w-full h-full object-cover"
+                                className="max-w-full max-h-full object-contain"
                               />
                             </div>
                           )}
