@@ -368,9 +368,13 @@ export function GachaPacksManageTab() {
                   {/* Center glow */}
                   <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${formPackType === 'premium' ? 'bg-red-600' : 'bg-gray-500'} rounded-full opacity-50 blur-2xl z-0`} />
                   
-                  {/* Artwork with offset and zoom */}
-                  <div className="absolute inset-0 px-16 flex items-center justify-center z-[1]" style={{ paddingTop: `${80 + artworkOffsetY}px`, paddingBottom: `${80 - artworkOffsetY}px`, paddingLeft: `${64 + artworkOffsetX}px`, paddingRight: `${64 - artworkOffsetX}px` }}>
-                    <img src={formImageUrl} alt="Preview" className="object-contain" style={{ maxWidth: '500px', maxHeight: '100%', transform: `scale(${artworkZoom})` }} />
+                  {/* Artwork container - HARD CLIPPED to 500px width */}
+                  <div className="absolute inset-0 flex items-center justify-center z-[1]">
+                    <div className="relative overflow-hidden" style={{ width: '500px', height: '840px' }}>
+                      <div className="absolute inset-0 flex items-center justify-center" style={{ transform: `translate(${artworkOffsetX}px, ${artworkOffsetY}px) scale(${artworkZoom})` }}>
+                        <img src={formImageUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
+                      </div>
+                    </div>
                   </div>
                   
                   {/* Template overlay */}
