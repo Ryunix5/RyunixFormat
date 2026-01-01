@@ -605,14 +605,17 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
 
   // This function is now replaced by getModifiedImage above
 
-  async function handlePurchase(item: CatalogItem) {
+  async function handlePurchase(item: CatalogItem | CardBundle) {
     setError("");
     setSuccess("");
     setPurchasing(item.name);
 
-    // Use modified price if admin has changed it
-    const actualPrice = getModifiedPrice(item);
-    const displayName = getDisplayName(item);
+    // Check if this is a bundle purchase
+    const isBundle = 'cards' in item;
+    
+    // Use modified price if admin has changed it (for decks/staples), or bundle price
+    const actualPrice = isBundle ? item.price : getModifiedPrice(item as CatalogItem);
+    const displayName = isBundle ? item.name : getDisplayName(item as CatalogItem);
 
     try {
       // Check if user has enough coins
@@ -630,7 +633,13 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
       }
 
       // Create purchase record
-      const itemType = category === "decks" ? PurchaseItemType.Deck : PurchaseItemType.Staple;
+      let itemType: PurchaseItemType;
+      if (isBundle) {
+        itemType = PurchaseItemType.Bundle;
+      } else {
+        itemType = category === "decks" ? PurchaseItemType.Deck : PurchaseItemType.Staple;
+      }
+      
       await purchaseORM.insertPurchase([
         {
           user_id: user.id,
@@ -639,6 +648,24 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
           bought_at: String(Math.floor(Date.now() / 1000)),
         } as unknown as PurchaseModel,
       ]);
+
+      // If this is a bundle, add all cards to user's collection
+      if (isBundle) {
+        const bundle = item as CardBundle;
+        const cardCatalogORM = CardCatalogORM.getInstance();
+        const cardsToAdd = bundle.cards.map(card => ({
+          name: card.name,
+          data: {
+            id: card.id,
+            name: card.name,
+            type: card.type,
+            desc: card.desc,
+            card_images: card.imageUrl ? [{ image_url: card.imageUrl }] : [],
+          },
+          archetypes: [`BUNDLE:${bundle.name}`, `USER:${user.id}`],
+        }));
+        await cardCatalogORM.bulkUpsert(cardsToAdd);
+      }
 
       // Update user coins
       const userORM = UserORM.getInstance();
@@ -657,7 +684,12 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
         } as unknown as CoinLogModel,
       ]);
 
-      setSuccess(`Successfully purchased ${displayName}!`);
+      if (isBundle) {
+        const bundle = item as CardBundle;
+        setSuccess(`Successfully purchased ${displayName}! Added ${bundle.cards.length} cards to your collection.`);
+      } else {
+        setSuccess(`Successfully purchased ${displayName}!`);
+      }
       onUserUpdate(user.id);
     } catch (err: any) {
       console.error('Purchase failed:', err);
@@ -1053,7 +1085,47 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
       {/* Grid View */}
       {viewMode === "grid" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {paginatedItems.map((item) => {
+          {category === "bundles" ? (
+            // Bundle rendering
+            paginatedItems.map((bundle: any) => (
+              <Card key={bundle.name} className="border border-slate-700 bg-slate-800 overflow-hidden">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 size-16 rounded-lg overflow-hidden border border-slate-600 bg-slate-700">
+                      {bundle.imageUrl ? (
+                        <img src={bundle.imageUrl} alt={bundle.name} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-500 text-2xl font-bold">📦</div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-lg font-bold text-slate-100 truncate cursor-pointer hover:text-amber-300 transition-colors flex items-center gap-1" onClick={() => setSelectedBundle(bundle)} title="Click to view cards in this bundle">
+                          {bundle.name}
+                          <Eye className="size-3 text-slate-500" />
+                        </CardTitle>
+                        <Badge className={`font-bold shrink-0 ${getRatingStyle(bundle.rating)}`}>{bundle.rating}</Badge>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">{bundle.cards.length} cards • {bundle.type}</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 bg-amber-900 px-3 py-1.5 rounded-lg border border-amber-700">
+                      <Coins className="size-4 text-amber-400" />
+                      <span className="font-bold text-amber-300">{bundle.price}</span>
+                    </div>
+                    <Button size="sm" onClick={() => setConfirmPurchase(bundle)} disabled={purchasing === bundle.name || user.coin < bundle.price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50">
+                      {purchasing === bundle.name ? "..." : "Buy"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            // Deck/Staple rendering
+            paginatedItems.map((item) => {
             const displayName = getDisplayName(item);
             const rating = getModifiedRating(item);
             const price = getModifiedPrice(item);
@@ -1209,6 +1281,38 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
         </DialogContent>
       </Dialog>
 
+      {/* Bundle Detail Dialog */}
+      <Dialog open={selectedBundle !== null} onOpenChange={(open) => { if (!open) setSelectedBundle(null); }}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-amber-400">{selectedBundle?.name}</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {selectedBundle?.cards.length} cards • {selectedBundle?.type} • {selectedBundle?.price} coins
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh] pr-2">
+            {selectedBundle && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {selectedBundle.cards.map((card) => (
+                  <div 
+                    key={card.id} 
+                    className="flex flex-col p-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors"
+                  >
+                    {card.imageUrl && (
+                      <div className="w-full aspect-[3/4] rounded overflow-hidden mb-2">
+                        <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
+                      </div>
+                    )}
+                    <div className="text-xs font-semibold text-slate-100 truncate" title={card.name}>{card.name}</div>
+                    <div className="text-xs text-slate-400 truncate">{card.type}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Purchase Confirmation Dialog */}
       <Dialog open={confirmPurchase !== null} onOpenChange={(open) => { if (!open) setConfirmPurchase(null); }}>
         <DialogContent className="bg-slate-900 border-slate-700">
@@ -1222,10 +1326,10 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-4 bg-slate-800 rounded-lg border border-slate-700">
                 <div className="shrink-0 size-16 rounded overflow-hidden border border-slate-600 bg-slate-700">
-                  {getModifiedImage(confirmPurchase) ? (
+                  {('imageUrl' in confirmPurchase && confirmPurchase.imageUrl) || getModifiedImage(confirmPurchase as CatalogItem) ? (
                     <img 
-                      src={getModifiedImage(confirmPurchase)} 
-                      alt={getDisplayName(confirmPurchase)} 
+                      src={('imageUrl' in confirmPurchase ? confirmPurchase.imageUrl : getModifiedImage(confirmPurchase as CatalogItem)) || ''} 
+                      alt={('name' in confirmPurchase ? confirmPurchase.name : getDisplayName(confirmPurchase as CatalogItem))} 
                       className="w-full h-full object-cover" 
                       onError={handleImageError} 
                     />
@@ -1234,10 +1338,10 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                   )}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-slate-100">{getDisplayName(confirmPurchase)}</h3>
+                  <h3 className="text-lg font-bold text-slate-100">{('name' in confirmPurchase ? confirmPurchase.name : getDisplayName(confirmPurchase as CatalogItem))}</h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge className={`font-bold text-xs ${getRatingStyle(getModifiedRating(confirmPurchase))}`}>
-                      {getModifiedRating(confirmPurchase)}
+                    <Badge className={`font-bold text-xs ${getRatingStyle(('rating' in confirmPurchase ? confirmPurchase.rating : getModifiedRating(confirmPurchase as CatalogItem)))}`}>
+                      {('rating' in confirmPurchase ? confirmPurchase.rating : getModifiedRating(confirmPurchase as CatalogItem))}
                     </Badge>
                     <span className="text-sm text-slate-400">{category === "decks" ? "Archetype Deck" : "Staple Card"}</span>
                   </div>

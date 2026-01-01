@@ -23,6 +23,7 @@ export enum PurchaseItemType {
   Unspecified = 0,
   Deck = 1,
   Staple = 2,
+  Bundle = 3,
 }
 
 
