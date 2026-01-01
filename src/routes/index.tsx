@@ -4679,7 +4679,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-          Gacha System
+          Gambling Time
         </h2>
         <p className="text-slate-400">Pull random cards and expand your collection!</p>
       </div>
