@@ -4752,7 +4752,6 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
 
       // Add individual cards to collection as purchase records (not whole archetypes!)
       // Each pulled card gets its own purchase record with the card name
-      const purchaseORM = PurchaseORM.getInstance();
       for (const result of pulledCards) {
         const cardName = result.card.name;
         // Always add gacha cards, even duplicates (you can pull same card multiple times)
