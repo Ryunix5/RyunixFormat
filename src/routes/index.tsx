@@ -4854,16 +4854,24 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
       for (let idx = 0; idx < pulledCards.length; idx++) {
         const result = pulledCards[idx];
         const cardName = result.card.name;
-        // Always add gacha cards, even duplicates (you can pull same card multiple times)
-        // Add small delay to ensure unique timestamps
-        await new Promise(resolve => setTimeout(resolve, 10));
-        await purchaseORM.insertPurchase([{
-          user_id: user.id,
-          item_name: cardName,
-          item_type: PurchaseItemType.Gacha,
-          bought_at: String(Math.floor(Date.now() / 1000) + idx), // Add index to ensure uniqueness
-        } as unknown as PurchaseModel]);
-        console.log(`Added gacha card to collection: ${cardName}, type: ${PurchaseItemType.Gacha}`);
+        try {
+          // Try to add gacha card (first time pulling this card)
+          await purchaseORM.insertPurchase([{
+            user_id: user.id,
+            item_name: cardName,
+            item_type: PurchaseItemType.Gacha,
+            bought_at: String(Math.floor(Date.now() / 1000)),
+          } as unknown as PurchaseModel]);
+          console.log(`Added gacha card to collection: ${cardName}, type: ${PurchaseItemType.Gacha}`);
+        } catch (err: any) {
+          // If duplicate (23505 = unique constraint violation), card already in collection - skip
+          if (err?.code === '23505') {
+            console.log(`Card already in collection: ${cardName}`);
+          } else {
+            // Other error - log but continue with remaining cards
+            console.error(`Failed to add card ${cardName}:`, err);
+          }
+        }
       }
 
       setResults(pulledCards);
@@ -4955,14 +4963,16 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                         <div className={`absolute inset-0 bg-gradient-to-br ${cardGradient}`} />
                         
                         {/* Center color indicator - behind the image */}
-                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${centerColor} rounded-full opacity-50 blur-2xl`} />
+                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${centerColor} rounded-full opacity-50 blur-2xl z-0`} />
                         
-                        {/* Pack image - clipped to border, no padding */}
-                        <img 
-                          src={banner.imageUrl} 
-                          alt={banner.name}
-                          className="absolute inset-0 w-full h-full object-cover z-[1]"
-                        />
+                        {/* Pack image - contained within border with padding */}
+                        <div className="absolute inset-0 p-2 flex items-center justify-center z-[1]">
+                          <img 
+                            src={banner.imageUrl} 
+                            alt={banner.name}
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        </div>
                         
                         {/* Konami logo at top - above image */}
                         <div className="absolute top-2 left-2 bg-red-700 px-3 py-1 rounded text-white font-bold text-sm z-20">
