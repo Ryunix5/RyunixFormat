@@ -4746,22 +4746,14 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
       // Get user's existing collection to check for new cards
       const purchaseORM = PurchaseORM.getInstance();
       const purchases = await purchaseORM.getPurchaseByUserId(user.id);
-      const ownedCardIds = new Set<number>();
+      const ownedCardNames = new Set<string>();
 
-      // Fetch all owned cards
-      for (const purchase of purchases) {
-        try {
-          const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(purchase.item_name)}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.data) {
-              data.data.forEach((card: ArchetypeCard) => ownedCardIds.add(card.id));
-            }
-          }
-        } catch (err) {
-          // Ignore errors for individual purchases
-        }
-      }
+      // Build set of owned card names from purchases
+      // For gacha cards (type 4), item_name is the card name
+      // For other types, item_name might be archetype names - just collect them
+      purchases.forEach(purchase => {
+        ownedCardNames.add(purchase.item_name.toLowerCase());
+      });
 
       // Determine card pool based on banner
       let cardPool: string[] = [];
@@ -4818,7 +4810,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
               pulledCards.push({
                 card: randomCard,
                 rarity,
-                isNew: !ownedCardIds.has(randomCard.id),
+                isNew: !ownedCardNames.has(randomCard.name.toLowerCase()),
                 archetype: randomEntry,
               });
             }
