@@ -1799,6 +1799,114 @@ function CollectionTab({ userId }: { userId: string }) {
     setLoadingAllCards(false);
   }
 
+  // Export collection as EdoPro banlist format
+  async function exportCollectionAsBanlist() {
+    if (allOwnedCards.length === 0) {
+      alert("No cards in your collection to export");
+      return;
+    }
+
+    try {
+      const date = new Date().toISOString().split('T')[0].replace(/-/g, '.');
+      let content = `#[Ryunix Format - My Collection]\n`;
+      content += `!${date} My Collection - All cards set to Unlimited\n`;
+      
+      // All cards in collection are unlimited (3 copies allowed)
+      for (const card of allOwnedCards) {
+        content += `${card.id} 3 --${card.name}\n`;
+      }
+
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `my_collection_${date}.lflist.conf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed", err);
+      alert("Failed to export collection. Please try again.");
+    }
+  }
+
+  // Export collection as YDK format
+  function exportCollectionAsYDK() {
+    if (allOwnedCards.length === 0) {
+      alert("No cards in your collection to export");
+      return;
+    }
+
+    try {
+      const monsters = allOwnedCards.filter(c => c.type.toLowerCase().includes('monster'));
+      const spells = allOwnedCards.filter(c => c.type.toLowerCase().includes('spell'));
+      const traps = allOwnedCards.filter(c => c.type.toLowerCase().includes('trap'));
+
+      let content = `#created by Ryunix Format\n#main\n`;
+      
+      // Add monsters
+      monsters.forEach(card => {
+        content += `${card.id}\n`;
+      });
+      
+      content += `#extra\n!side\n`;
+
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `my_collection_${new Date().toISOString().split('T')[0]}.ydk`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed", err);
+      alert("Failed to export YDK. Please try again.");
+    }
+  }
+
+  // Export collection as YDKE format (URL)
+  function exportCollectionAsYDKE() {
+    if (allOwnedCards.length === 0) {
+      alert("No cards in your collection to export");
+      return;
+    }
+
+    try {
+      // YDKE format: ydke://[main deck base64]![extra deck base64]![side deck base64]!
+      const cardIds = allOwnedCards.map(c => c.id.toString()).join('');
+      
+      // Convert to base64 (simplified - just main deck for collection)
+      const mainDeckIds = allOwnedCards.map(c => {
+        // Convert card ID to little-endian 4-byte format
+        const id = c.id;
+        const bytes = [
+          id & 0xFF,
+          (id >> 8) & 0xFF,
+          (id >> 16) & 0xFF,
+          (id >> 24) & 0xFF
+        ];
+        return String.fromCharCode(...bytes);
+      }).join('');
+
+      const base64Main = btoa(mainDeckIds);
+      const ydkeUrl = `ydke://${base64Main}!!`;
+
+      // Copy to clipboard
+      navigator.clipboard.writeText(ydkeUrl).then(() => {
+        alert(`YDKE URL copied to clipboard!\n\nYou can also save it:\n${ydkeUrl}`);
+      }).catch(() => {
+        // Fallback: show in alert
+        prompt("YDKE URL (copy this):", ydkeUrl);
+      });
+    } catch (err) {
+      console.error("Export failed", err);
+      alert("Failed to generate YDKE URL. Please try again.");
+    }
+  }
+
   // Get unique archetypes for filter dropdown
   function getOwnedArchetypes(): string[] {
     const archetypes = new Set<string>();
@@ -1996,6 +2104,34 @@ function CollectionTab({ userId }: { userId: string }) {
           <CardHeader>
             <CardTitle className="text-xl font-bold bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">All My Cards ({filteredOwnedCards.length}{filteredOwnedCards.length !== allOwnedCards.length ? ` of ${allOwnedCards.length}` : ""})</CardTitle>
             <CardDescription className="text-slate-400">All individual cards from your purchased archetypes and staples</CardDescription>
+            {!loadingAllCards && allOwnedCards.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-3">
+                <Button
+                  onClick={exportCollectionAsBanlist}
+                  size="sm"
+                  className="bg-slate-700 hover:bg-slate-600 text-slate-100 border border-slate-600"
+                >
+                  <Download className="size-3 mr-1.5" />
+                  Export as Banlist
+                </Button>
+                <Button
+                  onClick={exportCollectionAsYDK}
+                  size="sm"
+                  className="bg-slate-700 hover:bg-slate-600 text-slate-100 border border-slate-600"
+                >
+                  <Download className="size-3 mr-1.5" />
+                  Export as YDK
+                </Button>
+                <Button
+                  onClick={exportCollectionAsYDKE}
+                  size="sm"
+                  className="bg-slate-700 hover:bg-slate-600 text-slate-100 border border-slate-600"
+                >
+                  <Download className="size-3 mr-1.5" />
+                  Copy YDKE URL
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {/* Filters and View Mode Toggle */}
