@@ -4642,6 +4642,7 @@ interface GachaBanner {
   multiCost: number;
   imageUrl?: string;
   packType?: 'standard' | 'premium';
+  cardsArchetypes?: string[]; // Card pool for custom packs
 }
 
 interface GachaResult {
@@ -4704,6 +4705,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           multiCost: pack.multi_cost,
           imageUrl: pack.image_url,
           packType: pack.pack_type,
+          cardsArchetypes: pack.cards_archetypes || [],
         }));
         setBanners([...defaultBanners, ...customBanners]);
       } else {
@@ -4757,23 +4759,14 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
       // Determine card pool based on banner
       let cardPool: string[] = [];
       
-      // Check if banner has custom card pool (from database)
-      if (banner.id !== 'standard' && banner.id !== 'premium') {
-        // Custom pack - load its card pool from database
-        try {
-          const gachaPackORM = GachaPackORM.getInstance();
-          const pack = await gachaPackORM.getPackById(banner.id);
-          if (pack && pack.cards_archetypes && pack.cards_archetypes.length > 0) {
-            cardPool = pack.cards_archetypes;
-          }
-        } catch (err) {
-          console.error('Failed to load custom pack card pool:', err);
-        }
-      }
-      
-      // Fallback to all archetypes if no custom pool
-      if (cardPool.length === 0) {
+      // Check if banner has custom card pool
+      if (banner.cardsArchetypes && banner.cardsArchetypes.length > 0) {
+        cardPool = banner.cardsArchetypes;
+        console.log(`Using custom pack pool (${cardPool.length} entries):`, cardPool);
+      } else {
+        // Fallback to all archetypes for standard/premium packs
         cardPool = ARCHETYPE_DECKS.map(d => d.name);
+        console.log(`Using default archetype pool (${cardPool.length} entries)`);
       }
 
       const pulledCards: GachaResult[] = [];
@@ -4865,7 +4858,8 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           console.log(`Added gacha card to collection: ${cardName}, type: ${PurchaseItemType.Gacha}`);
         } catch (err: any) {
           // If duplicate (23505 = unique constraint violation), card already in collection - skip
-          if (err?.code === '23505') {
+          const errorCode = err?.code || err?.error?.code;
+          if (errorCode === '23505') {
             console.log(`Card already in collection: ${cardName}`);
           } else {
             // Other error - log but continue with remaining cards
