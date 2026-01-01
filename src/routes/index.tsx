@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Coins, ShoppingCart, History, User, LogOut, Users, Gift, KeyRound, BarChart3, Save, List, Grid3X3, LayoutGrid, X, Edit3, ChevronDown, ChevronUp, Eye, Search, Plus, Image, Package, Layers, ShoppingBag, Trash2, Star, Info, ArrowUpDown, ArrowUp, ArrowDown, Shield } from "lucide-react";
+import { Coins, ShoppingCart, History, User, LogOut, Users, Gift, KeyRound, BarChart3, Save, List, Grid3X3, LayoutGrid, X, Edit3, ChevronDown, ChevronUp, Eye, Search, Plus, Image, Package, Layers, ShoppingBag, Trash2, Star, Info, ArrowUpDown, ArrowUp, ArrowDown, Shield, Download } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { CardModificationsORM } from "@/sdk/database/orm/orm_card_modifications";
 import { PurchaseORM, type PurchaseModel, PurchaseItemType } from "@/sdk/database/orm/orm_purchase";
@@ -4356,6 +4356,7 @@ function UserBanlistTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<BanStatus | "all">("all");
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     loadBanlist();
@@ -4371,6 +4372,95 @@ function UserBanlistTab() {
       console.error("Failed to load banlist", err);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function exportToEdoPro() {
+    try {
+      setIsExporting(true);
+      
+      // Get all banned cards
+      const bannedEntries = Object.entries(banlist).filter(([_, data]) => 
+        data.banStatus !== "unlimited"
+      );
+      
+      if (bannedEntries.length === 0) {
+        alert("No banned cards to export");
+        return;
+      }
+
+      // Fetch card IDs from YGOProDeck API
+      const cardData: Record<string, number> = {};
+      
+      // Process in batches to avoid rate limiting
+      const batchSize = 20;
+      for (let i = 0; i < bannedEntries.length; i += batchSize) {
+        const batch = bannedEntries.slice(i, i + batchSize);
+        const promises = batch.map(async ([name]) => {
+          try {
+            const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(name)}`);
+            if (response.ok) {
+              const json = await response.json();
+              if (json.data && json.data[0]) {
+                cardData[name] = json.data[0].id;
+              }
+            }
+          } catch (err) {
+            console.warn(`Failed to fetch ID for ${name}`, err);
+          }
+        });
+        await Promise.all(promises);
+        
+        // Small delay between batches
+        if (i + batchSize < bannedEntries.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      // Generate EdoPro format
+      const date = new Date().toISOString().split('T')[0].replace(/-/g, '.');
+      let content = `#[Ryunix Format]\n`;
+      content += `!${date} Ryunix Format Banlist\n`;
+      
+      // Map ban status to EdoPro limit values
+      const getLimitValue = (status: BanStatus): number => {
+        switch (status) {
+          case "forbidden": return 0;
+          case "limited": return 1;
+          case "semi-limited": return 2;
+          default: return 3;
+        }
+      };
+
+      // Add cards to banlist
+      for (const [name, data] of bannedEntries) {
+        const cardId = cardData[name];
+        if (cardId) {
+          const limit = getLimitValue(data.banStatus);
+          content += `${cardId} ${limit} --${name}\n`;
+        }
+      }
+
+      // Create and download file
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ryunix_format_${date}.lflist.conf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      const missingCards = bannedEntries.length - Object.keys(cardData).length;
+      if (missingCards > 0) {
+        alert(`Export complete! Note: ${missingCards} card(s) couldn't be found in the database and were skipped.`);
+      }
+    } catch (err) {
+      console.error("Export failed", err);
+      alert("Failed to export banlist. Please try again.");
+    } finally {
+      setIsExporting(false);
     }
   }
 
@@ -4428,6 +4518,16 @@ function UserBanlistTab() {
           <CardDescription className="text-center text-slate-400">
             View all banned, limited, and semi-limited cards
           </CardDescription>
+          <div className="flex justify-center pt-4">
+            <Button
+              onClick={exportToEdoPro}
+              disabled={isExporting || Object.keys(banlist).length === 0}
+              className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold"
+            >
+              <Download className="size-4 mr-2" />
+              {isExporting ? "Exporting..." : "Export to EdoPro"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Stats */}
