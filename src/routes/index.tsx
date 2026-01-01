@@ -2283,14 +2283,6 @@ function GrantCoinsTab() {
 
     try {
       const userORM = UserORM.getInstance();
-      const users = await userORM.getUserByUsername(username);
-
-      if (users.length === 0) {
-        setError("User not found!");
-        return;
-      }
-
-      const user = users[0];
       const coinAmount = Number(amount);
 
       // Validate amount
@@ -2299,40 +2291,68 @@ function GrantCoinsTab() {
         return;
       }
 
-      // Ensure user record has an id to avoid inserting empty strings into numeric FKs
-      if (!user.id || String(user.id).trim() === "") {
-        setError("User record missing id; cannot grant coins.");
-        console.error('GrantCoins aborted: user has missing id', { username, user });
-        return;
+      // Check if granting to all users
+      const grantToAll = username.toLowerCase() === "*" || username.toLowerCase() === "all";
+      
+      let users: UserModel[];
+      if (grantToAll) {
+        // Get all users
+        users = await userORM.getAllUsers();
+        if (users.length === 0) {
+          setError("No users found in the database!");
+          return;
+        }
+      } else {
+        // Get specific user
+        users = await userORM.getUserByUsername(username);
+        if (users.length === 0) {
+          setError("User not found!");
+          return;
+        }
       }
 
-      const currentCoins = Number(user.coin) || 0;
-      const newCoinValue = currentCoins + coinAmount;
-
-      // Update user coins (ensure coin is numeric)
-      const updatedUser = { ...user, coin: newCoinValue };
-      // Use username index for update to avoid id type mismatch in DB
-      await userORM.setUserByUsername(user.username, updatedUser);
-
-      // Log the grant
       const coinLogORM = CoinLogORM.getInstance();
-      await coinLogORM.insertCoinLog([
-        {
-          user_id: user.id,
-          amount: coinAmount,
-          reason,
-          // store as unix seconds string to match schema
-          created_at: String(Math.floor(Date.now() / 1000)),
-        } as unknown as CoinLogModel,
-      ]);
+      let successCount = 0;
 
-      setSuccess(`Successfully granted ${coinAmount} coins to ${username}!`);
+      // Grant coins to each user
+      for (const user of users) {
+        // Ensure user record has an id
+        if (!user.id || String(user.id).trim() === "") {
+          console.error('GrantCoins skipped user with missing id', { username: user.username, user });
+          continue;
+        }
+
+        const currentCoins = Number(user.coin) || 0;
+        const newCoinValue = currentCoins + coinAmount;
+
+        // Update user coins
+        const updatedUser = { ...user, coin: newCoinValue };
+        await userORM.setUserByUsername(user.username, updatedUser);
+
+        // Log the grant
+        await coinLogORM.insertCoinLog([
+          {
+            user_id: user.id,
+            amount: coinAmount,
+            reason: grantToAll ? `${reason} (mass grant)` : reason,
+            created_at: String(Math.floor(Date.now() / 1000)),
+          } as unknown as CoinLogModel,
+        ]);
+
+        successCount++;
+      }
+
+      if (grantToAll) {
+        setSuccess(`Successfully granted ${coinAmount} coins to ${successCount} users!`);
+      } else {
+        setSuccess(`Successfully granted ${coinAmount} coins to ${username}!`);
+      }
+      
       setUsername("");
       setAmount("");
       setReason("");
     } catch (err: any) {
       console.error('GrantCoins error', err);
-      // Surface more info in UI to make it easy to copy the Supabase error object
       const msg = err?.code || err?.message ? `${err.code ?? ""} ${err.message ?? String(err)}` : String(err);
       setError(msg || "Failed to grant coins. Please try again.");
     } finally {
@@ -2372,7 +2392,8 @@ function GrantCoinsTab() {
 
           <div className="space-y-2">
             <Label htmlFor="grant-username" className="font-semibold text-slate-300">Username</Label>
-            <Input id="grant-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} className="transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 " />
+            <Input id="grant-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={isLoading} placeholder='Enter username or "*" for all users' className="transition-colors bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-amber-500 " />
+            <p className="text-xs text-slate-500">Tip: Use "*" or "all" to grant coins to everyone</p>
           </div>
 
           <div className="space-y-2">
