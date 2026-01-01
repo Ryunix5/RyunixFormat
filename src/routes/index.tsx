@@ -1486,6 +1486,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
 
 type AllCardsViewMode = "grid" | "list";
 type CardTypeFilter = "all" | "monster" | "spell" | "trap";
+type CardSortOption = "name-asc" | "name-desc" | "atk-asc" | "atk-desc" | "def-asc" | "def-desc" | "level-asc" | "level-desc" | "type";
 
 function CollectionTab({ userId }: { userId: string }) {
   const [purchases, setPurchases] = useState<PurchaseModel[]>([]);
@@ -1504,6 +1505,7 @@ function CollectionTab({ userId }: { userId: string }) {
   const [cardTypeFilter, setCardTypeFilter] = useState<CardTypeFilter>("all");
   const [archetypeFilter, setArchetypeFilter] = useState<string>("all");
   const [cardSearchTerm, setCardSearchTerm] = useState("");
+  const [cardSortOption, setCardSortOption] = useState<CardSortOption>("name-asc");
   
   // Pagination for purchase history
   const [historyPage, setHistoryPage] = useState(1);
@@ -1926,9 +1928,9 @@ function CollectionTab({ userId }: { userId: string }) {
     return Array.from(archetypes).sort();
   }
 
-  // Filter cards based on current filters
+  // Filter and sort cards based on current filters
   function getFilteredCards(): ArchetypeCard[] {
-    return allOwnedCards.filter((card) => {
+    let filtered = allOwnedCards.filter((card) => {
       // Search filter
       if (cardSearchTerm && !card.name.toLowerCase().includes(cardSearchTerm.toLowerCase())) {
         return false;
@@ -1949,6 +1951,34 @@ function CollectionTab({ userId }: { userId: string }) {
 
       return true;
     });
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (cardSortOption) {
+        case "name-asc":
+          return a.name.localeCompare(b.name);
+        case "name-desc":
+          return b.name.localeCompare(a.name);
+        case "atk-asc":
+          return (a.atk ?? -1) - (b.atk ?? -1);
+        case "atk-desc":
+          return (b.atk ?? -1) - (a.atk ?? -1);
+        case "def-asc":
+          return (a.def ?? -1) - (b.def ?? -1);
+        case "def-desc":
+          return (b.def ?? -1) - (a.def ?? -1);
+        case "level-asc":
+          return (a.level ?? -1) - (b.level ?? -1);
+        case "level-desc":
+          return (b.level ?? -1) - (a.level ?? -1);
+        case "type":
+          return a.type.localeCompare(b.type);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
   }
 
   const filteredOwnedCards = getFilteredCards();
@@ -2171,6 +2201,22 @@ function CollectionTab({ userId }: { userId: string }) {
                     {ownedArchetypes.map((arch) => (
                       <SelectItem key={arch} value={arch} className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">{arch}</SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+                <Select value={cardSortOption} onValueChange={(value) => setCardSortOption(value as CardSortOption)}>
+                  <SelectTrigger className="w-full md:w-40 bg-slate-800 border-slate-700 text-slate-100">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700">
+                    <SelectItem value="name-asc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Name (A-Z)</SelectItem>
+                    <SelectItem value="name-desc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Name (Z-A)</SelectItem>
+                    <SelectItem value="atk-desc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">ATK (High-Low)</SelectItem>
+                    <SelectItem value="atk-asc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">ATK (Low-High)</SelectItem>
+                    <SelectItem value="def-desc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">DEF (High-Low)</SelectItem>
+                    <SelectItem value="def-asc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">DEF (Low-High)</SelectItem>
+                    <SelectItem value="level-desc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Level (High-Low)</SelectItem>
+                    <SelectItem value="level-asc" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Level (Low-High)</SelectItem>
+                    <SelectItem value="type" className="text-slate-200 focus:bg-slate-700 focus:text-amber-300">Card Type</SelectItem>
                   </SelectContent>
                 </Select>
                 <div className="flex items-center gap-0.5 border border-slate-600 rounded-md p-0.5 bg-slate-800 ml-auto">
