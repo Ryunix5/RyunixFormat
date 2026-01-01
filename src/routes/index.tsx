@@ -1172,7 +1172,8 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                 </CardContent>
               </Card>
             );
-          })}
+          })
+          )}
         </div>
       )}
 
