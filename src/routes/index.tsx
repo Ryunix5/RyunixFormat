@@ -4668,12 +4668,35 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
   }, []);
 
   async function loadGachaPacks() {
+    // Always start with default packs
+    const defaultBanners: GachaBanner[] = [
+      {
+        id: 'standard',
+        name: 'Standard Pack',
+        description: 'Pull random cards from all available archetypes',
+        singleCost: 4,
+        multiCost: 90,
+        imageUrl: '/common.png',
+        packType: 'standard',
+      },
+      {
+        id: 'premium',
+        name: 'Premium Pack',
+        description: 'Higher chance for rare cards',
+        singleCost: 5,
+        multiCost: 115,
+        imageUrl: '/premium.png',
+        packType: 'premium',
+      },
+    ];
+
     try {
       const gachaPackORM = GachaPackORM.getInstance();
       const packs = await gachaPackORM.getActivePacks();
       
       if (packs && packs.length > 0) {
-        const loadedBanners: GachaBanner[] = packs.map(pack => ({
+        // Add custom packs after defaults
+        const customBanners: GachaBanner[] = packs.map(pack => ({
           id: pack.id,
           name: pack.name,
           description: pack.description,
@@ -4682,35 +4705,14 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           imageUrl: pack.image_url,
           packType: pack.pack_type,
         }));
-        setBanners(loadedBanners);
+        setBanners([...defaultBanners, ...customBanners]);
       } else {
-        // No packs in database, use defaults
-        throw new Error('No packs available');
+        // Only defaults
+        setBanners(defaultBanners);
       }
     } catch (err) {
-      console.error('Failed to load gacha packs:', err);
-      // Fallback to default packs
-      const defaultBanners: GachaBanner[] = [
-        {
-          id: 'standard',
-          name: 'Standard Pack',
-          description: 'Pull random cards from all available archetypes',
-          singleCost: 4,
-          multiCost: 90,
-          imageUrl: '/common.png',
-          packType: 'standard',
-        },
-        {
-          id: 'premium',
-          name: 'Premium Pack',
-          description: 'Higher chance for rare cards',
-          singleCost: 5,
-          multiCost: 115,
-          imageUrl: '/premium.png',
-          packType: 'premium',
-        },
-      ];
-      console.log('Using default packs:', defaultBanners);
+      console.error('Failed to load gacha packs from database:', err);
+      // Database unavailable, use only defaults
       setBanners(defaultBanners);
     } finally {
       setLoading(false);
