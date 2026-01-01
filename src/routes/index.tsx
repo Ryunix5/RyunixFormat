@@ -1840,11 +1840,37 @@ function CollectionTab({ userId }: { userId: string }) {
     }
 
     try {
-      const date = new Date().toISOString().split('T')[0].replace(/-/g, '.');
-      let content = `#[Ryunix Format - My Collection]\n`;
-      content += `!${date} My Collection - All cards set to Unlimited\n`;
+      alert("Fetching all Yu-Gi-Oh cards to create banlist... This may take a moment.");
       
-      // All cards in collection are unlimited (3 copies allowed)
+      // Fetch ALL cards from the API
+      const response = await fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php');
+      if (!response.ok) {
+        throw new Error('Failed to fetch card database');
+      }
+      
+      const data = await response.json();
+      const allYugiohCards = data.data || [];
+      
+      // Create a set of owned card IDs for quick lookup
+      const ownedCardIds = new Set(allOwnedCards.map(c => c.id).filter(id => id));
+      
+      const date = new Date().toISOString().split('T')[0].replace(/-/g, '.');
+      let content = `#[Ryunix Format - My Collection Only]\n`;
+      content += `!${date} Only cards in your collection are allowed - all others are banned\n\n`;
+      
+      // Section 1: Forbidden cards (all cards NOT in collection)
+      content += `#forbidden\n`;
+      for (const card of allYugiohCards) {
+        if (card.id && !ownedCardIds.has(card.id)) {
+          content += `${card.id} 0 --${card.name}\n`;
+        }
+      }
+      
+      content += `\n#limited\n`;
+      content += `#semi-limited\n`;
+      
+      // Section 2: Unlimited cards (all cards in collection)
+      content += `\n#unlimited\n`;
       for (const card of allOwnedCards) {
         if (card.id) {
           content += `${card.id} 3 --${card.name}\n`;
@@ -1855,13 +1881,14 @@ function CollectionTab({ userId }: { userId: string }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `my_collection_${date}.lflist.conf`;
+      a.download = `my_collection_only_${date}.lflist.conf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      alert(`Successfully exported ${allOwnedCards.length} cards to banlist file!`);
+      const bannedCount = allYugiohCards.length - allOwnedCards.length;
+      alert(`Successfully exported!\n${allOwnedCards.length} cards allowed (unlimited)\n${bannedCount} cards banned`);
     } catch (err) {
       console.error("Export failed", err);
       alert(`Failed to export collection: ${err instanceof Error ? err.message : 'Unknown error'}`);
