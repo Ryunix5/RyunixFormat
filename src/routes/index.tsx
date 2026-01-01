@@ -19,6 +19,7 @@ import { CoinLogORM, type CoinLogModel } from "@/sdk/database/orm/orm_coin_log";
 import { UserORM, type UserModel } from "@/sdk/database/orm/orm_user";
 import { BanlistORM } from "@/sdk/database/orm/orm_banlist";
 import { CardCatalogORM } from "@/sdk/database/orm/orm_cards";
+import { GachaPackORM, type GachaPackModel } from "@/sdk/database/orm/orm_gacha_pack";
 import type { BanStatus, BannedCard } from "@/data/banlist";
 import { ARCHETYPE_DECKS, STAPLE_CARDS, type CatalogItem, type MetaRating, META_RATING_PRICES } from "@/data/yugioh-catalog";
 import { CARD_BUNDLES, type CardBundle } from "@/data/card-bundles";
@@ -26,6 +27,7 @@ import { hashPassword, verifyPassword, createAuthToken, getAuthToken, setAuthTok
 import { getUserByUsername } from "@/lib/db";
 import { initializeAdminUser } from "@/lib/init-admin";
 import { BanlistManageTab } from "@/components/BanlistManageTab";
+import { GachaPacksManageTab } from "@/components/GachaPacksManageTab";
 import { BanIndicator } from "@/components/BanIndicator";
 
 export const Route = createFileRoute("/")({
@@ -2466,7 +2468,7 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
 
       <main className="container mx-auto px-4 py-8 relative">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 md:grid-cols-9 max-w-6xl h-auto md:h-12 bg-slate-800   border border-rose-700 p-1">
+          <TabsList className="grid w-full grid-cols-4 md:grid-cols-10 max-w-6xl h-auto md:h-12 bg-slate-800   border border-rose-700 p-1">
             <TabsTrigger value="create-user" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
               <Users className="size-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Create User</span>
@@ -2512,6 +2514,11 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
               <span className="hidden sm:inline">Banlist</span>
               <span className="sm:hidden">Ban</span>
             </TabsTrigger>
+            <TabsTrigger value="gacha-packs" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-rose-600 data-[state=active]:text-white data-[state=active]:font-bold text-slate-400 transition-colors text-sm md:text-base">
+              <Package className="size-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Gacha Packs</span>
+              <span className="sm:hidden">Gacha</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="create-user" className="mt-6 animate-in fade-in-50 duration-300">
@@ -2548,6 +2555,10 @@ function AdminDashboard({ user, onLogout, onUserUpdate }: { user: UserModel; onL
 
           <TabsContent value="banlist" className="mt-6 animate-in fade-in-50 duration-300">
             <BanlistManageTab key={banlistVersion} onBanlistChange={handleBanlistChange} />
+          </TabsContent>
+
+          <TabsContent value="gacha-packs" className="mt-6 animate-in fade-in-50 duration-300">
+            <GachaPacksManageTab />
           </TabsContent>
         </Tabs>
       </main>
@@ -4630,6 +4641,7 @@ interface GachaBanner {
   singleCost: number;
   multiCost: number;
   imageUrl?: string;
+  packType?: 'standard' | 'premium';
 }
 
 interface GachaResult {
@@ -4647,23 +4659,55 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
   const [animatingCards, setAnimatingCards] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
   const [selectedGachaCard, setSelectedGachaCard] = useState<{card: ArchetypeCard; rarity: GachaRarity; archetype?: string} | null>(null);
+  const [banners, setBanners] = useState<GachaBanner[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const banners: GachaBanner[] = [
-    {
-      id: 'standard',
-      name: 'Standard Pack',
-      description: 'Pull random cards from all available archetypes',
-      singleCost: 4,
-      multiCost: 90, // 24 packs, slight discount
-    },
-    {
-      id: 'premium',
-      name: 'Premium Pack',
-      description: 'Higher chance for rare cards',
-      singleCost: 5,
-      multiCost: 115, // 24 packs, slight discount
-    },
-  ];
+  // Load gacha packs from database
+  useEffect(() => {
+    loadGachaPacks();
+  }, []);
+
+  async function loadGachaPacks() {
+    try {
+      const gachaPackORM = GachaPackORM.getInstance();
+      const packs = await gachaPackORM.getActivePacks();
+      
+      const loadedBanners: GachaBanner[] = packs.map(pack => ({
+        id: pack.id,
+        name: pack.name,
+        description: pack.description,
+        singleCost: pack.single_cost,
+        multiCost: pack.multi_cost,
+        imageUrl: pack.image_url,
+        packType: pack.pack_type,
+      }));
+
+      setBanners(loadedBanners);
+    } catch (err) {
+      console.error('Failed to load gacha packs:', err);
+      // Fallback to default packs
+      setBanners([
+        {
+          id: 'standard',
+          name: 'Standard Pack',
+          description: 'Pull random cards from all available archetypes',
+          singleCost: 4,
+          multiCost: 90,
+          packType: 'standard',
+        },
+        {
+          id: 'premium',
+          name: 'Premium Pack',
+          description: 'Higher chance for rare cards',
+          singleCost: 5,
+          multiCost: 115,
+          packType: 'premium',
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function performPull(banner: GachaBanner, count: number) {
     if (pulling) return;
@@ -4841,51 +4885,94 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
       )}
 
       {/* Banners */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {banners.map(banner => (
-          <Card key={banner.id} className="border-2 border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold text-amber-400">{banner.name}</CardTitle>
-              <CardDescription className="text-slate-300">{banner.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
-                  <span className="text-slate-300">Single Pack</span>
-                  <div className="flex items-center gap-2">
-                    <Coins className="size-4 text-amber-400" />
-                    <span className="font-bold text-amber-300">{banner.singleCost}</span>
+      {loading ? (
+        <div className="text-center py-12 text-amber-400 animate-pulse">Loading gacha packs...</div>
+      ) : banners.length === 0 ? (
+        <Alert className="bg-amber-950/30 border-amber-500/50">
+          <AlertDescription className="text-amber-400">No gacha packs available. Contact admin.</AlertDescription>
+        </Alert>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {banners.map(banner => {
+            const centerColor = banner.packType === 'premium' ? 'bg-red-600' : 'bg-gray-600';
+            return (
+              <Card key={banner.id} className="border-2 border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
+                <CardHeader>
+                  {/* Pack Image Display */}
+                  {banner.imageUrl && (
+                    <div className="mb-4 relative">
+                      <div className="relative w-full h-64 bg-slate-900 rounded-lg overflow-hidden border-2 border-slate-700">
+                        {/* Background pattern */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
+                        
+                        {/* Konami logo at top */}
+                        <div className="absolute top-2 left-2 bg-red-700 px-3 py-1 rounded text-white font-bold text-sm">
+                          KONAMI
+                        </div>
+                        
+                        {/* Center color indicator */}
+                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 ${centerColor} rounded-full opacity-40 blur-xl`} />
+                        
+                        {/* Pack image */}
+                        <img 
+                          src={banner.imageUrl} 
+                          alt={banner.name}
+                          className="absolute inset-0 w-full h-full object-contain p-4"
+                        />
+                        
+                        {/* Yu-Gi-Oh! TCG logo at bottom */}
+                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center">
+                          <div className="text-red-600 font-black text-xs tracking-wider drop-shadow-lg">
+                            Yu-Gi-Oh! TRADING CARD GAME
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <CardTitle className="text-2xl font-bold text-amber-400">{banner.name}</CardTitle>
+                  <CardDescription className="text-slate-300">{banner.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                      <span className="text-slate-300">Single Pack (9 Cards)</span>
+                      <div className="flex items-center gap-2">
+                        <Coins className="size-4 text-amber-400" />
+                        <span className="font-bold text-amber-300">{banner.singleCost}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                      <span className="text-slate-300">Booster Box (24 Packs, 216 Cards)</span>
+                      <div className="flex items-center gap-2">
+                        <Coins className="size-4 text-amber-400" />
+                        <span className="font-bold text-amber-300">{banner.multiCost}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
-                  <span className="text-slate-300">Booster Box (24 Packs)</span>
-                  <div className="flex items-center gap-2">
-                    <Coins className="size-4 text-amber-400" />
-                    <span className="font-bold text-amber-300">{banner.multiCost}</span>
-                  </div>
-                </div>
-              </div>
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => performPull(banner, 9)}
-                  disabled={pulling || user.coin < banner.singleCost}
-                  className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-bold"
-                >
-                  {pulling ? "Opening..." : "Open Pack (9 Cards)"}
-                </Button>
-                <Button
-                  onClick={() => performPull(banner, 24 * 9)}
-                  disabled={pulling || user.coin < banner.multiCost}
-                  className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold"
-                >
-                  {pulling ? "Opening..." : "Open Box (216 Cards)"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => performPull(banner, 9)}
+                      disabled={pulling || user.coin < banner.singleCost}
+                      className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-bold"
+                    >
+                      {pulling ? "Opening..." : "Open Pack"}
+                    </Button>
+                    <Button
+                      onClick={() => performPull(banner, 24 * 9)}
+                      disabled={pulling || user.coin < banner.multiCost}
+                      className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold"
+                    >
+                      {pulling ? "Opening..." : "Open Box (24)"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Rates Info */}
       <Card className="border border-slate-700 bg-slate-800">
