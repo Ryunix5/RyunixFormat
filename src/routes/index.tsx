@@ -4668,7 +4668,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
   async function performPull(banner: GachaBanner, count: number) {
     if (pulling) return;
     
-    const cost = count === 1 ? banner.singleCost : banner.multiCost;
+    const cost = count === 9 ? banner.singleCost : banner.multiCost;
     
     if (user.coin < cost) {
       setError("Insufficient coins!");
@@ -4868,18 +4868,18 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
 
               <div className="flex gap-2">
                 <Button
-                  onClick={() => performPull(banner, 1)}
+                  onClick={() => performPull(banner, 9)}
                   disabled={pulling || user.coin < banner.singleCost}
                   className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-bold"
                 >
-                  {pulling ? "Opening..." : "Open Pack"}
+                  {pulling ? "Opening..." : "Open Pack (9 Cards)"}
                 </Button>
                 <Button
-                  onClick={() => performPull(banner, 24)}
+                  onClick={() => performPull(banner, 24 * 9)}
                   disabled={pulling || user.coin < banner.multiCost}
                   className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold"
                 >
-                  {pulling ? "Opening..." : "Open Box (24)"}
+                  {pulling ? "Opening..." : "Open Box (216 Cards)"}
                 </Button>
               </div>
             </CardContent>
