@@ -1730,6 +1730,8 @@ function CollectionTab({ userId }: { userId: string }) {
       const isArchetype = archetypeNames.has(purchase.item_name);
       const isStaple = stapleNames.has(purchase.item_name);
 
+      console.log(`Loading purchase: ${purchase.item_name}, type: ${purchase.item_type}, isArchetype: ${isArchetype}, isStaple: ${isStaple}`);
+
       if (isArchetype) {
         // Fetch archetype cards
         try {
@@ -1780,7 +1782,7 @@ function CollectionTab({ userId }: { userId: string }) {
         } catch (err) {
           console.error(`Failed to fetch staple card ${purchase.item_name}:`, err);
         }
-      } else if (purchase.item_type === PurchaseItemType.Gacha) {
+      } else if (purchase.item_type === PurchaseItemType.Gacha || purchase.item_type === 4) {
         // Gacha purchases are individual cards by exact name
         try {
           const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(purchase.item_name)}`);
@@ -1794,6 +1796,8 @@ function CollectionTab({ userId }: { userId: string }) {
               }));
               allCards.push(...cardsWithSource);
             }
+          } else {
+            console.error(`Failed to fetch gacha card ${purchase.item_name}: HTTP ${response.status}`);
           }
         } catch (err) {
           console.error(`Failed to fetch gacha card ${purchase.item_name}:`, err);
@@ -4761,6 +4765,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
           item_type: PurchaseItemType.Gacha,
           bought_at: String(Math.floor(Date.now() / 1000)),
         } as unknown as PurchaseModel]);
+        console.log(`Added gacha card to collection: ${cardName}, type: ${PurchaseItemType.Gacha}`);
       }
 
       setResults(pulledCards);
