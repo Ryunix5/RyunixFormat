@@ -4949,7 +4949,7 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                 <CardHeader>
                   {/* Pack Image Display */}
                   <div className="mb-4 relative">
-                    <div className={`relative w-full h-64 bg-slate-900 rounded-lg overflow-hidden border-4 ${cardBorderColor}`}>
+                    <div className={`relative w-full h-64 bg-slate-900 rounded-lg overflow-hidden`}>
                       {/* Background pattern */}
                       <div className={`absolute inset-0 bg-gradient-to-br ${cardGradient}`} />
                       
