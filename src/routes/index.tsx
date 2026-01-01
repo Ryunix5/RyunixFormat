@@ -4754,27 +4754,54 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
         }
       }
 
-      // Fetch random cards from all archetypes
-      const allArchetypes = ARCHETYPE_DECKS.map(d => d.name);
+      // Determine card pool based on banner
+      let cardPool: string[] = [];
+      
+      // Check if banner has custom card pool (from database)
+      if (banner.id !== 'standard' && banner.id !== 'premium') {
+        // Custom pack - load its card pool from database
+        try {
+          const gachaPackORM = GachaPackORM.getInstance();
+          const pack = await gachaPackORM.getPackById(banner.id);
+          if (pack && pack.cards_archetypes && pack.cards_archetypes.length > 0) {
+            cardPool = pack.cards_archetypes;
+          }
+        } catch (err) {
+          console.error('Failed to load custom pack card pool:', err);
+        }
+      }
+      
+      // Fallback to all archetypes if no custom pool
+      if (cardPool.length === 0) {
+        cardPool = ARCHETYPE_DECKS.map(d => d.name);
+      }
+
       const pulledCards: GachaResult[] = [];
 
       for (let i = 0; i < count; i++) {
-        // Pick random archetype
-        const randomArchetype = allArchetypes[Math.floor(Math.random() * allArchetypes.length)];
+        // Pick random card/archetype from pool
+        const randomEntry = cardPool[Math.floor(Math.random() * cardPool.length)];
         
         try {
-          const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(randomArchetype)}`);
+          // Try as archetype first
+          let response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?archetype=${encodeURIComponent(randomEntry)}`);
+          
+          // If 400 error, try as card name instead
+          if (!response.ok && response.status === 400) {
+            response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(randomEntry)}`);
+          }
+          
           if (response.ok) {
             const data = await response.json();
             if (data.data && data.data.length > 0) {
-              // Pick random card from archetype
+              // Pick random card from result (for archetypes) or use the single card (for card names)
               const randomCard = data.data[Math.floor(Math.random() * data.data.length)];
               
               // Determine rarity based on banner type and RNG
               let rarity: GachaRarity;
               const rarityRoll = Math.random();
               
-              if (banner.id === 'premium') {
+              if (banner.packType === 'premium') {
                 // Premium has better rates
                 if (rarityRoll < 0.05) rarity = 'Ultra Rare';
                 else if (rarityRoll < 0.20) rarity = 'Super Rare';
@@ -4792,12 +4819,12 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                 card: randomCard,
                 rarity,
                 isNew: !ownedCardIds.has(randomCard.id),
-                archetype: randomArchetype,
+                archetype: randomEntry,
               });
             }
           }
         } catch (err) {
-          console.error(`Failed to fetch cards for ${randomArchetype}`, err);
+          console.error(`Failed to fetch cards for ${randomEntry}`, err);
         }
       }
 
@@ -4824,14 +4851,17 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
 
       // Add individual cards to collection as purchase records (not whole archetypes!)
       // Each pulled card gets its own purchase record with the card name
-      for (const result of pulledCards) {
+      for (let idx = 0; idx < pulledCards.length; idx++) {
+        const result = pulledCards[idx];
         const cardName = result.card.name;
         // Always add gacha cards, even duplicates (you can pull same card multiple times)
+        // Add small delay to ensure unique timestamps
+        await new Promise(resolve => setTimeout(resolve, 10));
         await purchaseORM.insertPurchase([{
           user_id: user.id,
           item_name: cardName,
           item_type: PurchaseItemType.Gacha,
-          bought_at: String(Math.floor(Date.now() / 1000)),
+          bought_at: String(Math.floor(Date.now() / 1000) + idx), // Add index to ensure uniqueness
         } as unknown as PurchaseModel]);
         console.log(`Added gacha card to collection: ${cardName}, type: ${PurchaseItemType.Gacha}`);
       }
@@ -4924,28 +4954,28 @@ function GachaTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (user
                         {/* Background pattern */}
                         <div className={`absolute inset-0 bg-gradient-to-br ${cardGradient}`} />
                         
-                        {/* Konami logo at top */}
-                        <div className="absolute top-2 left-2 bg-red-700 px-3 py-1 rounded text-white font-bold text-sm z-10">
-                          KONAMI
-                        </div>
-                        
-                        {/* Pack type badge */}
-                        <div className={`absolute top-2 right-2 ${isPremium ? 'bg-red-600' : 'bg-gray-600'} px-3 py-1 rounded text-white font-bold text-xs z-10`}>
-                          {packLabel}
-                        </div>
-                        
-                        {/* Center color indicator - larger and more prominent */}
+                        {/* Center color indicator - behind the image */}
                         <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 ${centerColor} rounded-full opacity-50 blur-2xl`} />
                         
-                        {/* Pack image */}
+                        {/* Pack image - clipped to border, no padding */}
                         <img 
                           src={banner.imageUrl} 
                           alt={banner.name}
-                          className="absolute inset-0 w-full h-full object-contain p-4 z-10"
+                          className="absolute inset-0 w-full h-full object-cover z-[1]"
                         />
                         
-                        {/* Yu-Gi-Oh! TCG logo at bottom */}
-                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center z-10">
+                        {/* Konami logo at top - above image */}
+                        <div className="absolute top-2 left-2 bg-red-700 px-3 py-1 rounded text-white font-bold text-sm z-20">
+                          KONAMI
+                        </div>
+                        
+                        {/* Pack type badge - above image */}
+                        <div className={`absolute top-2 right-2 ${isPremium ? 'bg-red-600' : 'bg-gray-600'} px-3 py-1 rounded text-white font-bold text-xs z-20`}>
+                          {packLabel}
+                        </div>
+                        
+                        {/* Yu-Gi-Oh! TCG logo at bottom - above image */}
+                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-center z-20">
                           <div className="text-red-600 font-black text-xs tracking-wider drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">
                             Yu-Gi-Oh! TRADING CARD GAME
                           </div>
