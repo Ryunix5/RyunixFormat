@@ -394,7 +394,8 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
   const [filterRating, setFilterRating] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"name" | "price-asc" | "price-desc" | "rating">("name");
   const [viewMode, setViewMode] = useState<"list" | "compact" | "grid">("grid");
-  const [confirmPurchase, setConfirmPurchase] = useState<CatalogItem | CardBundle | null>(null);
+  const [cart, setCart] = useState<(CatalogItem | CardBundle)[]>([]);
+  const [showCart, setShowCart] = useState(false);
   const [selectedCard, setSelectedCard] = useState<ArchetypeCard | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -900,7 +901,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
         </Alert>
       )}
 
-      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
         <div className="flex gap-2">
           <Button variant={category === "decks" ? "default" : "outline"} onClick={() => setCategory("decks")} className={category === "decks" ? "bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold" : "border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-amber-500 hover:text-amber-400"}>
             Archetype Decks ({ARCHETYPE_DECKS.length})
@@ -913,6 +914,20 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
           </Button>
         </div>
         <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
+          {/* Shopping Cart Button */}
+          <Button 
+            onClick={() => setShowCart(true)} 
+            className="relative bg-green-600 hover:bg-green-700 text-white font-bold"
+          >
+            <ShoppingCart className="size-4 mr-2" />
+            Cart
+            {cart.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full size-5 flex items-center justify-center">
+                {cart.length}
+              </span>
+            )}
+          </Button>
+          
           <div className="relative w-full md:w-48">
             <Input placeholder="Search items..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pr-8 bg-slate-700 border-slate-600 text-slate-100 placeholder:text-slate-500 focus:border-amber-500" />
             {searchTerm && (
@@ -1041,7 +1056,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                   <Coins className="size-3.5 text-amber-400" />
                   <span className="font-bold text-amber-300 text-sm">{price}</span>
                 </div>
-                <Button size="sm" onClick={() => setConfirmPurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50 text-xs px-3">
+                <Button size="sm" onClick={() => setCart(prev => [...prev, item])} disabled={purchasing === item.name} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50 text-xs px-3">
                   {purchasing === item.name ? "..." : "Buy"}
                 </Button>
               </div>
@@ -1082,7 +1097,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                     <Coins className="size-3" />
                     <span className="text-sm font-bold">{price}</span>
                   </div>
-                  <Button size="sm" onClick={() => setConfirmPurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50 text-xs h-7 px-2">
+                  <Button size="sm" onClick={() => setCart(prev => [...prev, item])} disabled={purchasing === item.name} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50 text-xs h-7 px-2">
                     {purchasing === item.name ? "..." : "Buy"}
                   </Button>
                 </div>
@@ -1126,7 +1141,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                       <Coins className="size-4 text-amber-400" />
                       <span className="font-bold text-amber-300">{bundle.price}</span>
                     </div>
-                    <Button size="sm" onClick={() => setConfirmPurchase(bundle)} disabled={purchasing === bundle.name || user.coin < bundle.price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50">
+                    <Button size="sm" onClick={() => setCart(prev => [...prev, bundle])} disabled={purchasing === bundle.name} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50">
                       {purchasing === bundle.name ? "..." : "Buy"}
                     </Button>
                   </div>
@@ -1175,7 +1190,7 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
                       <Coins className="size-4 text-amber-400" />
                       <span className="font-bold text-amber-300">{price}</span>
                     </div>
-                    <Button size="sm" onClick={() => setConfirmPurchase(item)} disabled={purchasing === item.name || user.coin < price} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50">
+                    <Button size="sm" onClick={() => setCart(prev => [...prev, item])} disabled={purchasing === item.name} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50">
                       {purchasing === item.name ? "..." : "Buy"}
                     </Button>
                   </div>
@@ -1342,77 +1357,121 @@ function CatalogTab({ user, onUserUpdate }: { user: UserModel; onUserUpdate: (us
         </DialogContent>
       </Dialog>
 
-      {/* Purchase Confirmation Dialog */}
-      <Dialog open={confirmPurchase !== null} onOpenChange={(open) => { if (!open) setConfirmPurchase(null); }}>
-        <DialogContent className="bg-slate-900 border-slate-700">
+      {/* Shopping Cart Dialog */}
+      <Dialog open={showCart} onOpenChange={setShowCart}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-amber-400">Confirm Purchase</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-amber-400">Shopping Cart</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Are you sure you want to purchase this item?
+              Review your items before checkout
             </DialogDescription>
           </DialogHeader>
-          {confirmPurchase && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-slate-800 rounded-lg border border-slate-700">
-                <div className="shrink-0 size-16 rounded overflow-hidden border border-slate-600 bg-slate-700">
-                  {('imageUrl' in confirmPurchase && confirmPurchase.imageUrl) || getModifiedImage(confirmPurchase as CatalogItem) ? (
-                    <img 
-                      src={('imageUrl' in confirmPurchase ? confirmPurchase.imageUrl : getModifiedImage(confirmPurchase as CatalogItem)) || ''} 
-                      alt={('name' in confirmPurchase ? confirmPurchase.name : getDisplayName(confirmPurchase as CatalogItem))} 
-                      className="w-full h-full object-cover" 
-                      onError={handleImageError} 
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-500 text-2xl font-bold">?</div>
-                  )}
+          <div className="space-y-4">
+            {cart.length === 0 ? (
+              <div className="text-center py-12">
+                <ShoppingCart className="size-16 mx-auto text-slate-600 mb-4" />
+                <p className="text-slate-400">Your cart is empty</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {cart.map((item, index) => {
+                    const price = getModifiedPrice(item);
+                    const name = 'name' in item ? item.name : getDisplayName(item as CatalogItem);
+                    const rating = 'rating' in item ? item.rating : getModifiedRating(item as CatalogItem);
+                    const imageUrl = ('imageUrl' in item && item.imageUrl) || getModifiedImage(item as CatalogItem);
+                    
+                    return (
+                      <div key={index} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-700">
+                        <div className="shrink-0 size-12 rounded overflow-hidden border border-slate-600 bg-slate-700">
+                          {imageUrl ? (
+                            <img 
+                              src={imageUrl} 
+                              alt={name} 
+                              className="w-full h-full object-cover" 
+                              onError={handleImageError} 
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-500 text-xl font-bold">?</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-bold text-slate-100 truncate">{name}</h3>
+                          <Badge className={`font-bold text-xs mt-1 ${getRatingStyle(rating)}`}>
+                            {rating}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1">
+                            <Coins className="size-4 text-amber-400" />
+                            <span className="text-sm font-bold text-amber-400">{price}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setCart(prev => prev.filter((_, i) => i !== index))}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-950/30 h-8 w-8 p-0"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-slate-100">{('name' in confirmPurchase ? confirmPurchase.name : getDisplayName(confirmPurchase as CatalogItem))}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge className={`font-bold text-xs ${getRatingStyle(('rating' in confirmPurchase ? confirmPurchase.rating : getModifiedRating(confirmPurchase as CatalogItem)))}`}>
-                      {('rating' in confirmPurchase ? confirmPurchase.rating : getModifiedRating(confirmPurchase as CatalogItem))}
-                    </Badge>
-                    <span className="text-sm text-slate-400">{category === "decks" ? "Archetype Deck" : "Staple Card"}</span>
+                
+                <div className="border-t border-slate-700 pt-4 space-y-3">
+                  <div className="flex items-center justify-between p-4 bg-slate-800 rounded-lg border border-slate-700">
+                    <div>
+                      <p className="text-sm text-slate-400">Total Cost</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Coins className="size-5 text-amber-400" />
+                        <span className="text-2xl font-bold text-amber-400">
+                          {cart.reduce((sum, item) => sum + getModifiedPrice(item), 0)}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-400">Your Balance</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Coins className="size-5 text-amber-400" />
+                        <span className="text-2xl font-bold text-slate-100">{user.coin}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setCart([])} 
+                      className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
+                    >
+                      Clear Cart
+                    </Button>
+                    <Button 
+                      onClick={async () => {
+                        const totalCost = cart.reduce((sum, item) => sum + getModifiedPrice(item), 0);
+                        if (user.coin < totalCost) {
+                          setError('Insufficient coins for this purchase');
+                          return;
+                        }
+                        
+                        for (const item of cart) {
+                          await handlePurchase(item);
+                        }
+                        setCart([]);
+                        setShowCart(false);
+                      }} 
+                      disabled={user.coin < cart.reduce((sum, item) => sum + getModifiedPrice(item), 0)}
+                      className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold disabled:opacity-50"
+                    >
+                      Checkout ({cart.length} {cart.length === 1 ? 'item' : 'items'})
+                    </Button>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-slate-800 rounded-lg border border-slate-700">
-                <div>
-                  <p className="text-sm text-slate-400">Cost</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Coins className="size-5 text-amber-400" />
-                    <span className="text-xl font-bold text-amber-400">{getModifiedPrice(confirmPurchase)}</span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400">Your Balance</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Coins className="size-5 text-amber-400" />
-                    <span className="text-xl font-bold text-slate-100">{user.coin}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setConfirmPurchase(null)} 
-                  className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={() => {
-                    handlePurchase(confirmPurchase);
-                    setConfirmPurchase(null);
-                  }} 
-                  disabled={user.coin < getModifiedPrice(confirmPurchase)}
-                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold"
-                >
-                  Confirm Purchase
-                </Button>
-              </div>
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
